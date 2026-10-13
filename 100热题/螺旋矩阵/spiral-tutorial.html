@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>螺旋矩阵 · 思路教程 — 看懂思路，凭空复现代码</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    line-height: 1.8;
+    padding: 40px 20px 80px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 28px; color: #fff; margin-bottom: 4px; }
+  .sub { color: #94a3b8; font-size: 14px; margin-bottom: 36px; }
+  h2 {
+    font-size: 20px; color: #fbbf24; margin: 44px 0 14px;
+    padding-bottom: 8px; border-bottom: 1px solid #1e293b;
+  }
+  h2 .no { color: #475569; margin-right: 8px; }
+  p { margin-bottom: 12px; font-size: 15px; }
+  b.y { color: #fbbf24; }
+  b.c { color: #38bdf8; }
+  b.g { color: #34d399; }
+  b.o { color: #fb923c; }
+  b.p { color: #f472b6; }
+  code {
+    background: #020617; border: 1px solid #1e293b; border-radius: 5px;
+    padding: 1px 7px; font-size: 13px; color: #7dd3fc;
+    font-family: Consolas, "Cascadia Code", monospace;
+  }
+  .card {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 20px 24px; margin: 16px 0;
+  }
+  .key {
+    background: linear-gradient(135deg, rgba(251,191,36,.12), rgba(251,191,36,.04));
+    border: 1px solid rgba(251,191,36,.35);
+    border-radius: 12px; padding: 18px 24px; margin: 18px 0;
+  }
+  .key .t { color: #fbbf24; font-weight: 700; margin-bottom: 6px; }
+  table.mini { border-collapse: collapse; margin: 10px auto; }
+  table.mini td {
+    width: 34px; height: 34px; text-align: center; font-size: 13px;
+    border: 1px solid #334155; background: #1e293b; color: #cbd5e1;
+  }
+  table.mini td.ring { background: #365375; color: #fff; font-weight: 700; }
+  table.mini td.core { background: #7c3aed; color: #fff; }
+  .figrow { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+  .figrow .cap { text-align: center; font-size: 13px; color: #94a3b8; margin-top: 6px; }
+
+  pre.block {
+    background: #020617; border: 1px solid #1e293b; border-radius: 10px;
+    padding: 16px 20px; font-family: Consolas, monospace; font-size: 13.5px;
+    line-height: 1.75; color: #7dd3fc; overflow-x: auto; margin: 14px 0;
+  }
+  pre.block .cm { color: #64748b; }
+  pre.block .kw { color: #c084fc; }
+  pre.block .num { color: #fbbf24; }
+
+  /* ===== 动画区 ===== */
+  .stage { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  table.grid { border-collapse: collapse; }
+  table.grid td {
+    width: 58px; height: 58px; text-align: center; font-size: 19px; font-weight: 700;
+    border: 1px solid #334155; background: #1e293b; transition: background .15s;
+  }
+  td.top    { background: #38bdf8; color: #0f172a; }
+  td.right  { background: #34d399; color: #0f172a; }
+  td.bottom { background: #fb923c; color: #0f172a; }
+  td.left   { background: #f472b6; color: #0f172a; }
+  td.cur    { outline: 3px solid #fff; outline-offset: -3px; }
+  td.off    { opacity: .18; }
+
+  .panel { width: 340px; }
+  .layer-badge {
+    display: inline-block; background: #7c3aed; color: #fff; font-weight: 700;
+    border-radius: 8px; padding: 3px 12px; font-size: 14px; margin-bottom: 10px;
+  }
+  .edge-line { font-size: 15px; min-height: 54px; }
+  .edge-line .nm { font-weight: 700; }
+  .check-line {
+    border-radius: 10px; padding: 10px 14px; font-size: 14px; margin: 8px 0; min-height: 66px;
+  }
+  .check-yes { background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.4); color: #6ee7b7; }
+  .check-no  { background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.4); color: #fca5a5; }
+  .check-idle { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); color: #64748b; }
+  .res { font-size: 13px; color: #7dd3fc; word-break: break-all; margin-top: 10px; }
+  .res b { color: #fbbf24; }
+  .ctrl { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  button {
+    background: #334155; color: #e2e8f0; border: none; border-radius: 8px;
+    padding: 8px 16px; font-weight: 700; cursor: pointer; font-size: 13.5px;
+  }
+  button.pri { background: #38bdf8; color: #0f172a; }
+  button:hover { filter: brightness(1.2); }
+  .sizes { display: flex; gap: 14px; align-items: center; margin-top: 12px; font-size: 13px; color: #94a3b8; flex-wrap: wrap; }
+  input[type=range] { accent-color: #38bdf8; width: 110px; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #cbd5e1; margin: 12px 0; }
+  .legend .dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; margin-right: 5px; vertical-align: -1px; }
+
+  ul.tight { margin: 0 0 12px 22px; font-size: 15px; }
+  ul.tight li { margin-bottom: 8px; }
+  .foot { margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>螺旋矩阵 · 思路教程</h1>
+  <div class="sub">目标：不看代码，只凭这一页的思路 + 动画，就能把代码重新写出来。（LeetCode 54 · 顺时针螺旋）</div>
+
+  <!-- ================= 1 ================= -->
+  <h2><span class="no">①</span>核心模型：把矩阵当成洋葱</h2>
+  <p>
+    螺旋遍历不是一格一格想，而是<b class="y">一圈一圈想</b>。整个矩阵 = 一层层的环，
+    最外层是第 <code>k=0</code> 圈，往里 <code>k=1</code>、<code>k=2</code>……每走完一圈，向内收缩一格。
+  </p>
+  <div class="figrow">
+    <div>
+      <table class="mini">
+        <tr><td class="ring">0</td><td class="ring">1</td><td class="ring">2</td><td class="ring">3</td></tr>
+        <tr><td class="ring">13</td><td class="core">14</td><td class="core">15</td><td class="ring">4</td></tr>
+        <tr><td class="ring">12</td><td class="core">19</td><td class="core">16</td><td class="ring">5</td></tr>
+        <tr><td class="ring">11</td><td class="ring">10</td><td class="ring">9</td><td class="ring">8</td></tr>
+      </table>
+      <div class="cap">4×4：2 圈，没有中心点</div>
+    </div>
+    <div>
+      <table class="mini">
+        <tr><td class="ring">0</td><td class="ring">1</td><td class="ring">2</td></tr>
+        <tr><td class="ring">7</td><td class="core">8</td><td class="ring">3</td></tr>
+        <tr><td class="ring">6</td><td class="ring">5</td><td class="ring">4</td></tr>
+      </table>
+      <div class="cap">3×3：外圈 + 中心 1 格（中心也是“一圈”）</div>
+    </div>
+    <div>
+      <table class="mini">
+        <tr><td class="ring">0</td><td class="ring">1</td><td class="ring">2</td></tr>
+        <tr><td class="ring">5</td><td class="ring">4</td><td class="ring">3</td></tr>
+      </table>
+      <div class="cap">2×3：只有 1 圈（一条粗环）</div>
+    </div>
+  </div>
+  <div class="key">
+    <div class="t">🔑 推论 1：圈数 = 短边的一半，向上取整</div>
+    <p style="margin:0;">
+      4×4 → 2 圈；3×3 → 2 圈（外圈+中心）；2×3 → 1 圈；5×5 → 3 圈。<br>
+      写成 Python 就是 <code>range((min(m, n) - 1) // 2 + 1)</code>，
+      等价于 <code>ceil(min(m,n) / 2)</code>。<b class="y">记住“短边决定圈数”即可，公式现推。</b>
+    </p>
+  </div>
+
+  <!-- ================= 2 ================= -->
+  <h2><span class="no">②</span>一圈的固定路线：上 → 右 → 下 → 左</h2>
+  <p>
+    每一圈<b class="y">永远按同一个顺序走四条边</b>：上边向右 → 右边向下 → 下边向左 → 左边向上。
+    顺序固定，就不需要方向数组、不需要 while 循环，全部用 <code>for</code> 硬写。
+  </p>
+  <p>关键只在<b class="y">“角落归谁”</b>。四个角如果人人都走，就会重复。规则很简单：</p>
+  <div class="key">
+    <div class="t">🔑 推论 2：让头吃尾 —— 每条边的“头”让给上一条边，“尾”自己吃</div>
+    <ul class="tight" style="margin-top:8px;">
+      <li><b class="c">① 上边</b>：第一个出发，<b class="c">头尾全吃</b>（含左上角、右上角）</li>
+      <li><b class="g">② 右边</b>：头（右上角）已被①吃 → <b class="g">从下一行开始</b>；尾（右下角）自己吃</li>
+      <li><b class="o">③ 下边</b>：头（右下角）已被②吃 → <b class="o">从右往左时先让一格</b>；尾（左下角）自己吃</li>
+      <li><b class="p">④ 左边</b>：头（左下角）已被③吃 → 让一格；<b class="p">尾（左上角）也让掉</b>——它属于下一圈</li>
+    </ul>
+  </div>
+  <p>
+    于是四条边的下标范围全部由 <b class="y">k 推出来</b>，不需要背，现场画一圈就能写：
+    设 <code>m</code> 行 <code>n</code> 列，第 <code>k</code> 圈的边界是 <b class="c">上=k</b>、<b class="g">右=n-1-k</b>、<b class="o">下=m-1-k</b>、<b class="p">左=k</b>。
+  </p>
+  <pre class="block">
+① 上边  行固定 = k        列: k      → n-1-k      <span class="cm">(头尾全吃)</span>
+② 右边  列固定 = n-1-k    行: k+1    → m-1-k      <span class="cm">(让头)</span>
+③ 下边  行固定 = m-1-k    列: n-2-k  → k   倒序   <span class="cm">(让头)</span>
+④ 左边  列固定 = k        行: m-2-k  → k+1 倒序   <span class="cm">(让头也让尾)</span></pre>
+
+  <!-- ================= 3 ================= -->
+  <h2><span class="no">③</span>两个特判：单行、单列的圈“没有下边 / 左边”</h2>
+  <p>
+    推论 2 隐含一个前提：<b class="y">这一圈真的存在四条边</b>。但当圈内只剩
+    <b class="o">一条横线（1 行）</b>或<b class="p">一条竖线（1 列）</b>时，③④ 会沿原路<b class="y">倒着再走一遍</b>，全部重复。
+  </p>
+  <ul class="tight">
+    <li><b class="y">第 14 行</b> <code>if k + 1 != m - k</code> —— 实际是在问：
+      <b class="o">上边(k 行) 和 下边(m-1-k 行) 是不是同一行？</b>
+      相等 → 这圈是一条横线，①早已走完，③必须跳过。</li>
+    <li><b class="y">第 18 行</b> <code>if k + 1 != n - k</code> —— 在问：
+      <b class="p">左边(k 列) 和 右边(n-1-k 列) 是不是同一列？</b>
+      相等 → 这圈是一条竖线，①+② 早已走完，④必须跳过。</li>
+  </ul>
+  <div class="key">
+    <div class="t">🔑 推论 3：还原代码时的位置记忆</div>
+    <p style="margin:0;">
+      两个 <code>if</code> 分别<b class="y">挡在③和④前面</b>：走下边之前先确认“这圈有下边”，走左边之前先确认“这圈有左边”。
+      注意 3×3 的中心格：此时①走的就是那 1 格，②③④全空/被跳过 —— 天然正确，<b class="y">不用额外处理中心点</b>。
+    </p>
+  </div>
+
+  <!-- ================= 4 ================= -->
+  <h2><span class="no">④</span>动画：一步步看思路落地</h2>
+  <p style="color:#94a3b8;">下面的动画按“层 → 边 → 格”推进。<b>每当走到③④之前，会弹出第 14/18 行判断的实时结果</b>——这就是两个 if 生效的瞬间。建议把尺寸调成 1×5、5×1、3×3 各看一遍。</p>
+
+  <div class="card">
+    <div class="stage">
+      <table class="grid" id="grid"></table>
+      <div class="panel">
+        <div><span class="layer-badge" id="badge">第 0 圈</span></div>
+        <div class="edge-line" id="edgeLine">按 ▶ 开始</div>
+        <div class="check-line check-idle" id="check14">第 14 行判断：待命</div>
+        <div class="check-line check-idle" id="check18">第 18 行判断：待命</div>
+        <div class="res" id="res"></div>
+        <div class="ctrl">
+          <button class="pri" id="play">▶ 播放</button>
+          <button id="step">单步</button>
+          <button id="back">← 上一步</button>
+          <button id="reset">重置</button>
+        </div>
+        <div class="sizes">
+          行 <input type="range" id="mIn" min="1" max="6" value="4"> <span id="mV">4</span>
+          　列 <input type="range" id="nIn" min="1" max="6" value="4"> <span id="nV">4</span>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:#38bdf8"></i>① 上边</span>
+      <span><i class="dot" style="background:#34d399"></i>② 右边</span>
+      <span><i class="dot" style="background:#fb923c"></i>③ 下边</span>
+      <span><i class="dot" style="background:#f472b6"></i>④ 左边</span>
+    </div>
+  </div>
+
+  <!-- ================= 5 ================= -->
+  <h2><span class="no">⑤</span>凭空复现：五步默写法</h2>
+  <p>以后写代码时，按这五步顺序默写，每一步都有明确的“为什么”：</p>
+  <div class="card">
+    <ul class="tight">
+      <li><b class="y">第 1 步 · 圈数</b>：短边一半向上取整 → <code>for k in range((min(m,n)-1)//2 + 1)</code></li>
+      <li><b class="c">第 2 步 · 上边</b>：头尾全吃 → <code>for i in range(k, n-k)</code>，取 <code>matrix[k][i]</code></li>
+      <li><b class="g">第 3 步 · 右边</b>：让头 → <code>for i in range(k+1, m-k)</code>，取 <code>matrix[i][n-1-k]</code></li>
+      <li><b class="o">第 4 步 · 下边</b>：先写 <code>if k+1 != m-k</code>（有下边才走），再 <code>for i in range(n-2-k, k-1, -1)</code>，取 <code>matrix[m-1-k][i]</code></li>
+      <li><b class="p">第 5 步 · 左边</b>：先写 <code>if k+1 != n-k</code>（有左边才走），再 <code>for i in range(m-2-k, k, -1)</code>，取 <code>matrix[i][k]</code></li>
+    </ul>
+  </div>
+  <pre class="block">
+<span class="cm"># 1. 圈数：短边一半向上取整</span>
+<span class="kw">for</span> k <span class="kw">in</span> range((min(m, n) - <span class="num">1</span>) // <span class="num">2</span> + <span class="num">1</span>):
+    <span class="cm"># 2. 上边：头尾全吃</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(k, n - k):            res.append(matrix[k][i])
+    <span class="cm"># 3. 右边：让头吃尾</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(k + <span class="num">1</span>, m - k):        res.append(matrix[i][n - <span class="num">1</span> - k])
+    <span class="cm"># 4. 下边：有下边才走（⭐ 单行圈跳过）</span>
+    <span class="kw">if</span> k + <span class="num">1</span> != m - k:
+        <span class="kw">for</span> i <span class="kw">in</span> range(n - <span class="num">2</span> - k, k - <span class="num">1</span>, -<span class="num">1</span>):  res.append(matrix[m - <span class="num">1</span> - k][i])
+    <span class="cm"># 5. 左边：有左边才走（⭐ 单列圈跳过）</span>
+    <span class="kw">if</span> k + <span class="num">1</span> != n - k:
+        <span class="kw">for</span> i <span class="kw">in</span> range(m - <span class="num">2</span> - k, k, -<span class="num">1</span>):      res.append(matrix[i][k])</pre>
+  <div class="key foot">
+    <div class="t">🧭 一句话口诀</div>
+    <p style="margin:0;">
+      <b class="y">“短边定圈数，上右下左转；让头去吃尾，单行单列砍下左。”</b><br>
+      忘记范围时：先画一圈，标出 上=k / 右=n-1-k / 下=m-1-k / 左=k，四个范围现场推。
+    </p>
+  </div>
+</div>
+
+<script>
+const el = id => document.getElementById(id);
+let m = 4, n = 4, steps = [], idx = 0, timer = null;
+let cells = [];
+
+function buildGrid() {
+  const t = el('grid');
+  t.innerHTML = '';
+  cells = [];
+  for (let r = 0; r < m; r++) {
+    const tr = document.createElement('tr');
+    const row = [];
+    for (let c = 0; c < n; c++) {
+      const td = document.createElement('td');
+      td.textContent = r * n + c;
+      tr.appendChild(td);
+      row.push(td);
+    }
+    cells.push(row);
+    t.appendChild(tr);
+  }
+}
+
+// 生成步骤流：层开场 → ①②格 → 14行判断 → ③格 → 18行判断 → ④格
+function computeSteps() {
+  steps = [];
+  for (let k = 0; k <= Math.floor((Math.min(m, n) - 1) / 2); k++) {
+    steps.push({ kind: 'layer', k });
+    for (let i = k; i < n - k; i++) steps.push({ kind: 'cell', edge: 'top', r: k, c: i, k });
+    for (let i = k + 1; i < m - k; i++) steps.push({ kind: 'cell', edge: 'right', r: i, c: n - 1 - k, k });
+
+    const hasBottom = (k + 1 !== m - k);
+    steps.push({ kind: 'check', line: 14, ok: hasBottom, k });
+    if (hasBottom)
+      for (let i = n - 2 - k; i >= k; i--) steps.push({ kind: 'cell', edge: 'bottom', r: m - 1 - k, c: i, k });
+
+    const hasLeft = (k + 1 !== n - k);
+    steps.push({ kind: 'check', line: 18, ok: hasLeft, k });
+    if (hasLeft)
+      for (let i = m - 2 - k; i >= k + 1; i--) steps.push({ kind: 'cell', edge: 'left', r: i, c: k, k });
+  }
+}
+
+const EDGE_TXT = {
+  top:    k => `<span class="nm" style="color:#38bdf8">① 上边 →</span>　matrix[${k}][i]，i: ${k} → ${n-k-1}<br><span style="color:#64748b;font-size:13px">头尾全吃（左上角、右上角都归它）</span>`,
+  right:  k => `<span class="nm" style="color:#34d399">② 右边 ↓</span>　matrix[i][${n-1-k}]，i: ${k+1} → ${m-k-1}<br><span style="color:#64748b;font-size:13px">让头：右上角已被①吃过</span>`,
+  bottom: k => `<span class="nm" style="color:#fb923c">③ 下边 ←</span>　matrix[${m-1-k}][i]，i: ${n-k-2} → ${k}（倒序）<br><span style="color:#64748b;font-size:13px">让头：右下角已被②吃过</span>`,
+  left:   k => `<span class="nm" style="color:#f472b6">④ 左边 ↑</span>　matrix[i][${k}]，i: ${m-k-2} → ${k+1}（倒序）<br><span style="color:#64748b;font-size:13px">让头也让尾：左上角属于下一圈</span>`
+};
+
+function render() {
+  // 清空
+  cells.forEach(row => row.forEach(td => td.className = ''));
+  const visited = [];
+  for (let s = 0; s < idx && s < steps.length; s++) {
+    const st = steps[s];
+    if (st.kind === 'cell') {
+      cells[st.r][st.c].classList.add(st.edge);
+      visited.push(st.r * n + st.c);
+    }
+  }
+  // 当前格描边
+  const cur = steps[idx - 1];
+  if (cur && cur.kind === 'cell') cells[cur.r][cur.c].classList.add('cur');
+  // 未走到的变暗
+  const vs = new Set(visited);
+  cells.forEach((row, r) => row.forEach((td, c) => { if (!vs.has(r * n + c)) td.classList.add('off'); }));
+
+  // 面板
+  const badge = el('badge'), edgeLine = el('edgeLine');
+  const c14 = el('check14'), c18 = el('check18');
+  if (idx === 0) {
+    badge.textContent = '准备';
+    edgeLine.innerHTML = '按 ▶ 开始';
+    c14.className = c18.className = 'check-line check-idle';
+    c14.textContent = '第 14 行判断：待命';
+    c18.textContent = '第 18 行判断：待命';
+    el('res').innerHTML = '';
+    return;
+  }
+  const k = cur.k;
+  badge.textContent = `第 ${k} 圈（上=${k}　右=${n-1-k}　下=${m-1-k}　左=${k}）`;
+  if (cur.kind === 'layer') {
+    edgeLine.innerHTML = `🧅 剥开第 ${k} 层洋葱，从左上角 (${k}, ${k}) 出发`;
+  } else if (cur.kind === 'cell') {
+    edgeLine.innerHTML = EDGE_TXT[cur.edge](k);
+  } else if (cur.kind === 'check') {
+    edgeLine.innerHTML = cur.line === 14
+      ? '走 ③ 之前，先问：这圈还有独立的下边吗？'
+      : '走 ④ 之前，先问：这圈还有独立的左边吗？';
+  }
+  // 两个判断框：显示“最近一次判断”的结果，之后保持
+  const last14 = latestCheck(14), last18 = latestCheck(18);
+  setCheck(c14, 14, last14);
+  setCheck(c18, 18, last18);
+  el('res').innerHTML = visited.length
+    ? `结果: <b>[${visited.join(', ')}]</b>　共 ${visited.length}/${m*n} 格`
+    : '';
+}
+
+function latestCheck(line) {
+  for (let s = idx - 1; s >= 0; s--)
+    if (steps[s].kind === 'check' && steps[s].line === line) return steps[s];
+  return null;
+}
+function setCheck(box, line, st) {
+  if (!st) { box.className = 'check-line check-idle'; box.textContent = `第 ${line} 行判断：待命`; return; }
+  const k = st.k;
+  const a = k + 1, b = (line === 14 ? m - k : n - k);
+  const ask = line === 14 ? `k+1=${a}  vs  m-k=${b}　→　上边和下边${st.ok ? '不是' : '是'}同一行`
+                          : `k+1=${a}  vs  n-k=${b}　→　左边和右边${st.ok ? '不是' : '是'}同一列`;
+  if (st.ok) {
+    box.className = 'check-line check-yes';
+    box.innerHTML = `第 ${line} 行：✅ ${a} != ${b}，走${line === 14 ? '下边 ③' : '左边 ④'}<br><span style="font-size:12.5px">${ask}</span>`;
+  } else {
+    box.className = 'check-line check-no';
+    box.innerHTML = `第 ${line} 行：❌ ${a} == ${b}，跳过${line === 14 ? '下边 ③（倒走会重复）' : '左边 ④（倒走会重复）'}<br><span style="font-size:12.5px">${ask}</span>`;
+  }
+}
+
+function rebuild() {
+  stopPlay();
+  buildGrid();
+  computeSteps();
+  idx = 0;
+  render();
+}
+function stepFwd() { if (idx < steps.length) { idx++; render(); } }
+function stepBack() { if (idx > 0) { idx--; render(); } }
+function stopPlay() { if (timer) { clearInterval(timer); timer = null; el('play').textContent = '▶ 播放'; } }
+el('step').onclick = () => { stopPlay(); stepFwd(); };
+el('back').onclick = () => { stopPlay(); stepBack(); };
+el('reset').onclick = () => rebuild();
+el('play').onclick = () => {
+  if (timer) { stopPlay(); return; }
+  el('play').textContent = '⏸ 暂停';
+  timer = setInterval(() => {
+    if (idx >= steps.length) { idx = 0; }
+    idx++; render();
+  }, 380);
+};
+el('mIn').oninput = e => { m = +e.target.value; el('mV').textContent = m; rebuild(); };
+el('nIn').oninput = e => { n = +e.target.value; el('nV').textContent = n; rebuild(); };
+
+rebuild();
+</script>
+</body>
+</html>

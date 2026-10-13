@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 295. 数据流的中位数 — 图解双堆</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171b2e;
+    --panel2: #1e2440;
+    --text: #e8eaf6;
+    --muted: #9aa3c7;
+    --accent: #4f8cff;
+    --green: #3ddc97;
+    --red: #ff6b81;
+    --yellow: #ffd166;
+    --purple: #b18cff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  h1 { font-size: 1.7em; margin-bottom: 6px; }
+  h1 .lc-tag {
+    background: var(--red); color: #fff; font-size: .55em;
+    padding: 2px 10px; border-radius: 6px; vertical-align: middle; margin-right: 10px;
+    font-weight: bold;
+  }
+  h2 {
+    margin: 44px 0 14px; font-size: 1.3em;
+    padding-left: 12px; border-left: 4px solid var(--accent);
+  }
+  h3 { margin: 20px 0 8px; font-size: 1.05em; color: var(--text); }
+  p, li { color: var(--muted); }
+  strong, em { color: var(--text); }
+  code {
+    font-family: var(--mono);
+    background: var(--panel2); color: var(--green);
+    padding: 1px 6px; border-radius: 4px; font-size: .92em;
+  }
+  pre {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 14px; padding: 18px 22px; margin: 14px 0;
+    font-family: var(--mono); font-size: .9em; line-height: 1.65;
+    overflow-x: auto; color: #c6cdf0;
+  }
+  pre .kw { color: var(--purple); }
+  pre .fn { color: var(--accent); }
+  pre .num { color: var(--yellow); }
+  pre .cm { color: #6b7499; }
+  pre .str { color: var(--green); }
+  .card {
+    background: var(--panel); border-radius: 14px;
+    padding: 20px 24px; margin: 14px 0;
+    border: 1px solid #262c4a;
+  }
+  .complexity-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .complexity-row .card { flex: 1; min-width: 240px; margin: 0; position: relative; overflow: hidden; }
+  .complexity-row .card .big {
+    font-family: var(--mono); font-size: 1.5em; color: var(--accent);
+  }
+  .complexity-row .card .tag {
+    position: absolute; top: 12px; right: 14px; font-size: .8em;
+    padding: 1px 8px; border-radius: 99px;
+  }
+  .tag.ok { background: rgba(61,220,151,.15); color: var(--green); }
+  .tag.bad { background: rgba(255,107,129,.15); color: var(--red); }
+  .tag.mid { background: rgba(255,209,102,.15); color: var(--yellow); }
+  .key-insight {
+    background: linear-gradient(135deg, rgba(79,140,255,.12), rgba(177,140,255,.10));
+    border: 1px solid rgba(79,140,255,.35);
+    border-radius: 14px; padding: 18px 22px; margin: 16px 0;
+    font-size: 1.05em;
+  }
+  .key-insight b { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: .95em; }
+  th, td {
+    border: 1px solid #2c3358; padding: 8px 14px;
+    text-align: left; color: var(--muted);
+  }
+  th { background: var(--panel2); color: var(--text); }
+  td .mono, .mono { font-family: var(--mono); }
+  td .good { color: var(--green); }
+  td .bad { color: var(--red); }
+
+  /* ===== 动画区 ===== */
+  .stage-wrap {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 16px; padding: 24px; margin: 18px 0;
+  }
+  .heaps-row {
+    display: flex; gap: 24px; justify-content: center; align-items: stretch;
+  }
+  .heap-box {
+    flex: 1; max-width: 420px; background: var(--panel2);
+    border: 1px dashed #313a63; border-radius: 14px;
+    padding: 14px 12px 10px; position: relative;
+    transition: border-color .4s;
+  }
+  .heap-box.active-max { border-color: var(--accent); box-shadow: 0 0 18px rgba(79,140,255,.18); }
+  .heap-box.active-min { border-color: var(--green); box-shadow: 0 0 18px rgba(61,220,151,.18); }
+  .heap-title {
+    text-align: center; font-family: var(--mono); font-size: .85em;
+    margin-bottom: 8px; font-weight: 700;
+  }
+  .heap-title.max { color: var(--accent); }
+  .heap-title.min { color: var(--green); }
+  .heap-sub {
+    text-align: center; font-size: .72em; color: #6b7499; font-family: var(--mono);
+  }
+  .heap-cells {
+    display: flex; gap: 8px; justify-content: center; align-items: flex-end;
+    min-height: 92px; padding: 26px 0 6px; flex-wrap: wrap;
+  }
+  .cell {
+    width: 46px; height: 46px; border-radius: 10px;
+    background: var(--bg); border: 1px solid #313a63;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 1.05em; font-weight: 600;
+    position: relative; transition: all .45s cubic-bezier(.4,0,.2,1);
+  }
+  .cell.maxheap { background: rgba(79,140,255,.20); border-color: var(--accent); color: var(--accent); }
+  .cell.minheap { background: rgba(61,220,151,.18); border-color: var(--green); color: var(--green); }
+  .cell.top { transform: translateY(-8px); outline: 2px solid var(--yellow); }
+  .cell.newcome {
+    animation: pop .5s cubic-bezier(.34,1.56,.64,1);
+    background: rgba(255,209,102,.28); border-color: var(--yellow); color: var(--yellow);
+  }
+  @keyframes pop {
+    0%   { transform: scale(.3) translateY(-40px); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .median-badge {
+    text-align: center; margin: 26px 0 4px;
+    font-family: var(--mono); font-size: 1.25em; min-height: 1.6em;
+  }
+  .median-badge .val {
+    color: var(--yellow); font-weight: 700; font-size: 1.15em;
+    border-bottom: 2px dashed var(--yellow); padding: 0 10px 2px;
+  }
+  .action-line {
+    text-align: center; margin-top: 10px; color: var(--muted);
+    font-size: .95em; min-height: 1.6em;
+  }
+  .action-line .num-hl { color: var(--yellow); font-family: var(--mono); font-weight: 700; }
+  .action-line .to-max { color: var(--accent); font-family: var(--mono); font-weight: 700; }
+  .action-line .to-min { color: var(--green); font-family: var(--mono); font-weight: 700; }
+
+  .controls {
+    display: flex; justify-content: center; align-items: center; gap: 12px;
+    margin-top: 20px;
+  }
+  .controls button {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid #313a63; border-radius: 10px;
+    padding: 8px 18px; font-size: .95em; cursor: pointer;
+    transition: background .2s; font-family: inherit;
+  }
+  .controls button:hover { background: #2a3258; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .progress {
+    flex: 1; max-width: 300px; height: 6px; border-radius: 99px;
+    background: var(--panel2); overflow: hidden;
+  }
+  .progress > div {
+    height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--green));
+    transition: width .3s;
+  }
+  .stream-line {
+    display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .stream-line .cell { width: 40px; height: 40px; font-size: .95em; cursor: default; }
+  .stream-line .cell.done { opacity: .9; }
+  .stream-line .cell.pending { opacity: .25; }
+  .stream-line .cell.current { outline: 2px solid var(--yellow); transform: translateY(-6px); }
+  .log-history {
+    margin-top: 16px; max-height: 150px; overflow-y: auto;
+    font-family: var(--mono); font-size: .85em; color: #7c86b3;
+    border-top: 1px dashed #2c3358; padding-top: 10px;
+  }
+  .log-history div { padding: 1px 0; }
+  .log-history .hit { color: var(--yellow); }
+
+  .footer-note { text-align: center; color: #5b6591; font-size: .85em; margin-top: 50px; }
+</style>
+</head>
+<body>
+
+<h1><span class="lc-tag">LeetCode 295 困难</span>数据流的中位数 — 双堆图解</h1>
+<p>中位数 = 有序序列的中间值；偶数个元素时取两个中间值的平均。</p>
+
+<h2>一、题目回顾</h2>
+<div class="card">
+  <p>设计一个支持两种操作的数据结构：</p>
+  <ul>
+    <li><code>addNum(num)</code>：从数据流中添加一个整数</li>
+    <li><code>findMedian()</code>：返回目前所有元素的中位数（误差 10<sup>-5</sup> 内即可）</li>
+  </ul>
+  <p><strong>难点：</strong>数据是<strong>动态流入</strong>的 —— 我们不能等全部数据到齐再排序，每次 <code>addNum</code> 之后随时可能被询问中位数。</p>
+</div>
+
+<h2>二、思路演进：从暴力到双堆</h2>
+<table>
+  <tr><th>方案</th><th>addNum</th><th>findMedian</th><th>说明</th></tr>
+  <tr>
+    <td>① 每次全量排序</td>
+    <td class="mono bad">O(n log n)</td>
+    <td class="mono good">O(1)</td>
+    <td>加一个数就排一次序，大量重复比较</td>
+  </tr>
+  <tr>
+    <td>② 有序数组 + 二分插入</td>
+    <td class="mono mid">O(n)</td>
+    <td class="mono good">O(1)</td>
+    <td>二分找位置快，但插入要搬移后面所有元素</td>
+  </tr>
+  <tr>
+    <td>③ <strong>双堆（对顶堆）</strong></td>
+    <td class="mono good">O(log n)</td>
+    <td class="mono good">O(1)</td>
+    <td>只维护"局部的最大/最小"，不维护全局有序</td>
+  </tr>
+</table>
+
+<div class="key-insight">
+  <b>核心洞察：</b>求中位数根本不需要"整个数组有序"，只需要知道——<br>
+  比中位数小的那一半里的<b>最大值</b>，以及比中位数大的那一半里的<b>最小值</b>。
+  恰好，"快速取最大值"是<b>大顶堆</b>的看家本领，"快速取最小值"是<b>小顶堆</b>的看家本领！
+</div>
+
+<h2>三、双堆（对顶堆）模型</h2>
+<div class="card">
+  <h3>分工</h3>
+  <ul>
+    <li><strong>small（大顶堆）</strong>：存放较小的一半数，堆顶是这一半的<strong>最大值</strong></li>
+    <li><strong>large（小顶堆）</strong>：存放较大的一半数，堆顶是这一半的<strong>最小值</strong></li>
+  </ul>
+  <h3>不变式（维持的性质）</h3>
+  <ul>
+    <li>small 中所有元素 ≤ large 中所有元素（堆顶之间相邻，即"对顶"）</li>
+    <li>元素个数：<code>len(small) == len(large)</code>，或 <code>len(small) == len(large) + 1</code>（small 最多多一个）</li>
+  </ul>
+  <h3>求中位数 O(1)</h3>
+  <ul>
+    <li>总数为奇数 → 中位数 = <code>small 堆顶</code></li>
+    <li>总数为偶数 → 中位数 = <code>(small堆顶 + large堆顶) / 2</code></li>
+  </ul>
+  <h3>插入 num 的统一技巧（先放后调）</h3>
+  <ul>
+    <li>先把 num push 进 <code>small</code>（大顶堆），弹出它的堆顶 max；</li>
+    <li>把这个 max push 进 <code>large</code>；</li>
+    <li>若此时 <code>len(large) > len(small)</code>，再把 large 的堆顶（最小值）弹回 small。</li>
+  </ul>
+  <p>这样做<strong>不需要分类讨论</strong> num 和两个堆顶的大小关系——三步"倒手"天然保证了 small 的所有元素 ≤ large 的所有元素，且个数只会在 small/large 之间偏多一个，两个不变式同时成立。</p>
+</div>
+
+<div class="stage-wrap">
+  <div class="stream-line" id="streamLine"></div>
+  <div class="heaps-row">
+    <div class="heap-box" id="boxMax">
+      <div class="heap-title max">small — 大顶堆（较小的一半）</div>
+      <div class="heap-sub">堆顶 = 下半部分最大值（Python 中用负号模拟）</div>
+      <div class="heap-cells" id="cellsMax"></div>
+    </div>
+    <div class="heap-box" id="boxMin">
+      <div class="heap-title min">large — 小顶堆（较大的一半）</div>
+      <div class="heap-sub">堆顶 = 上半部分最小值</div>
+      <div class="heap-cells" id="cellsMin"></div>
+    </div>
+  </div>
+  <div class="median-badge" id="medianBadge">中位数 = ?</div>
+  <div class="action-line" id="actionLine">点击 ▶ 自动播放，或点「下一步」逐个观察数字流入</div>
+  <div class="controls">
+    <button id="btnReset">↺ 重置</button>
+    <button id="btnPrev">‹ 上一步</button>
+    <button id="btnNext" class="primary">下一步 ›</button>
+    <button id="btnPlay">▶ 自动播放</button>
+    <div class="progress"><div id="progressBar"></div></div>
+  </div>
+  <div class="log-history" id="logHistory"></div>
+</div>
+
+<h2>四、Python 实现（heapq 模板）</h2>
+<pre><span class="cm"># Python 的 heapq 只有小顶堆，大顶堆用「取负」模拟：存 -x，弹出时再取负还原</span>
+<span class="kw">import</span> heapq
+
+<span class="kw">class</span> <span class="fn">MedianFinder</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.small = []  <span class="cm"># 大顶堆（存负数）：较小的一半，堆顶是 -max</span>
+        self.large = []  <span class="cm"># 小顶堆：较大的一半，堆顶是 min</span>
+
+    <span class="kw">def</span> <span class="fn">addNum</span>(self, num: int) -> <span class="kw">None</span>:
+        <span class="cm"># ① 先放进 small（大顶堆），把它的最大值挤出来给 large</span>
+        heapq.heappush(self.small, -num)
+        <span class="cm"># ② 保证 small 的所有元素 ≤ large 的所有元素</span>
+        heapq.heappush(self.large, -heapq.heappop(self.small))
+        <span class="cm"># ③ 个数平衡：small 最多比 large 多 1</span>
+        <span class="kw">if</span> len(self.large) > len(self.small):
+            heapq.heappush(self.small, -heapq.heappop(self.large))
+
+    <span class="kw">def</span> <span class="fn">findMedian</span>(self) -> <span class="kw">float</span>:
+        <span class="kw">if</span> len(self.small) > len(self.large):   <span class="cm"># 总数为奇数</span>
+            <span class="kw">return</span> -self.small[<span class="num">0</span>]
+        <span class="kw">return</span> (-self.small[<span class="num">0</span>] + self.large[<span class="num">0</span>]) / <span class="num">2</span>  <span class="cm"># 偶数取平均</span></pre>
+
+<h2>五、逐行追踪示例</h2>
+<div class="card">
+  <p>数据流依次为 <span class="mono">1, 2, 3</span>：</p>
+  <table>
+    <tr><th>addNum</th><th>small（大顶堆，存负数）</th><th>large（小顶堆）</th><th>findMedian</th></tr>
+    <tr><td class="mono">1</td><td class="mono">[-1]</td><td class="mono">[]</td><td class="mono good">1.0（奇数个，取 small 堆顶）</td></tr>
+    <tr><td class="mono">2</td><td class="mono">[-1]</td><td class="mono">[2]</td><td class="mono good">1.5（(1+2)/2，取两堆顶平均）</td></tr>
+    <tr><td class="mono">3</td><td class="mono">[-2, -1]</td><td class="mono">[3]</td><td class="mono good">2.0（奇数个，取 small 堆顶 2）</td></tr>
+  </table>
+  <p>注意第 3 步（addNum 3）的三步倒手：① 3 先压进 small；② small 挤出最大值 3 交给 large（此时 large = {2, 3} 共 2 个、small = {1} 共 1 个）；③ large 偏多，弹回最小值 2 给 small。最终 small = {1, 2}、large = {3}，总数为奇数，中位数 = small 堆顶 2，全程无需讨论 3 与堆顶的大小关系。</p>
+</div>
+
+<h2>六、复杂度分析</h2>
+<div class="complexity-row">
+  <div class="card">
+    <span class="tag ok">addNum</span>
+    <div class="big">O(log n)</div>
+    <p>至多 3 次 heappush / heappop，每次堆操作代价为堆高 log n。</p>
+  </div>
+  <div class="card">
+    <span class="tag ok">findMedian</span>
+    <div class="big">O(1)</div>
+    <p>直接读两个堆顶 <code>small[0]</code> / <code>large[0]</code>，不做任何调整。</p>
+  </div>
+  <div class="card">
+    <span class="tag mid">空间</span>
+    <div class="big">O(n)</div>
+    <p>两个堆共存下所有 n 个元素，各占约一半。</p>
+  </div>
+</div>
+
+<h2>七、常见疑问与拓展</h2>
+<div class="card">
+  <ul>
+    <li><strong>Q：为什么"先放后调"不用讨论 num 的大小？</strong><br>
+      因为任何数先进 small 后，被挤出的都是"较小一半中的最大值"，把它交给 large 一定满足 ≤ large 全体；数量失衡时再从 large 弹回最小值给 small，两个不变式在每一步都被机械地维护住了。</li>
+    <li><strong>Q：能不能让两个堆"严格各一半"？</strong><br>
+      可以，但奇数个元素时中位数落在哪一半需要额外讨论；约定"small 最多多一个"后，奇数情形的中位数<strong>永远在 small 堆顶</strong>，实现最简洁。</li>
+    <li><strong>Q：Python 怎么建大顶堆？</strong><br>
+      标准库里<strong>没有大顶堆</strong>——<code>heapq</code> 只提供小顶堆，也没有 <code>reverse</code> / <code>key</code> 参数（这点和 Java 的 <code>PriorityQueue</code> 相反）。约定俗成的做法就是本文代码中的「<strong>存相反数</strong>」法：把数取负丢进小顶堆，取出时再取负还原。嫌负号易错的话，可以把反转逻辑封装进一个 <code>MaxHeap</code> 类（暴露 <code>push / pop / peek</code>），或用包装对象重写 <code>__lt__</code> 改变比较规则——但负号法最简洁，面试中也是默认写法，至少要看得懂。</li>
+    <li><strong>Q：还有别的做法吗？</strong><br>
+      <span class="mono">collections.Counter</span> + 桶 / 平衡二叉搜索树（<code>SortedList</code>）、有序容器 + 双指针等也可行，但面试标准答案就是双堆，且它天然适合<strong>数据流</strong>场景（流式、无需回看历史数据）。</li>
+    <li><strong>相关题目：</strong>剑指 Offer 41、LC 480 滑动窗口中位数、LC 703 数据流中的第 K 大元素（单堆即可）。</li>
+  </ul>
+</div>
+
+<p class="footer-note">双堆模板：分流（small → large）+ 平衡（large → small），把大小比较交给堆自动完成。</p>
+
+<script>
+(function () {
+  var STREAM = [5, 2, 8, 1, 9, 3];
+
+  // 预计算每一步的堆状态
+  var steps = [{ small: [], large: [], median: null, msg: '初始状态：两个堆都是空的', streamIdx: -1 }];
+  var small = [], large = [];
+  for (var i = 0; i < STREAM.length; i++) {
+    var num = STREAM[i];
+    var desc = [];
+    // 三步法
+    small.push(-num);
+    small.sort(function (a, b) { return a - b; }); // 大顶堆存负数，升序即堆顶在 [0]
+    desc.push('push ' + num + ' → small');
+    var moved = -small.shift();
+    large.push(moved);
+    large.sort(function (a, b) { return a - b; });
+    desc.push('small 挤出 ' + moved + ' → large');
+    if (large.length > small.length) {
+      var back = large.shift();
+      small.push(-back);
+      small.sort(function (a, b) { return a - b; });
+      desc.push('large 偏多，弹回 ' + back + ' → small');
+    }
+    var median = (small.length > large.length)
+      ? -small[0]
+      : (-small[0] + large[0]) / 2;
+    steps.push({
+      small: small.slice(), large: large.slice(),
+      median: median,
+      msg: 'addNum(' + num + ')：' + desc.join('；'),
+      streamIdx: i,
+      isNew: { small: small.indexOf(-num) >= 0 && moved === num ? -1 : (large.indexOf(num) >= 0 ? -1 : -1) }
+    });
+  }
+
+  var cur = 0, timer = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function renderHeaps(containerId, arr, isMax, highlightVal) {
+    var c = $(containerId);
+    c.innerHTML = '';
+    if (!arr.length) {
+      var e = document.createElement('div');
+      e.style.cssText = 'color:#4a5378;font-size:.85em;font-family:var(--mono);padding:14px 0;';
+      e.textContent = '(空)';
+      c.appendChild(e);
+      return;
+    }
+    arr.forEach(function (v) {
+      var d = document.createElement('div');
+      d.className = 'cell ' + (isMax ? 'maxheap' : 'minheap');
+      d.textContent = isMax ? -v : v;
+      if (highlightVal !== undefined && (isMax ? -v : v) === highlightVal) d.classList.add('newcome');
+      c.appendChild(d);
+    });
+  }
+
+  function render() {
+    var s = steps[cur];
+    renderHeaps('cellsMax', s.small, true, cur > 0 ? STREAM[cur - 1] : undefined);
+    renderHeaps('cellsMin', s.large, false, cur > 0 ? STREAM[cur - 1] : undefined);
+    $('boxMax').className = 'heap-box' + (cur > 0 ? ' active-max' : '');
+    $('boxMin').className = 'heap-box' + (cur > 0 ? ' active-min' : '');
+
+    var mb = $('medianBadge');
+    if (s.median === null) {
+      mb.innerHTML = '中位数 = ?';
+    } else {
+      mb.innerHTML = '共 ' + (cur) + ' 个数，中位数 = <span class="val">' + s.median + '</span>' +
+        (cur % 2 === 1 ? '（奇数个 → small 堆顶）' : '（偶数个 → 两堆顶平均）');
+    }
+    $('actionLine').innerHTML = s.msg;
+
+    // 流水线
+    var sl = $('streamLine');
+    sl.innerHTML = '';
+    STREAM.forEach(function (v, i) {
+      var d = document.createElement('div');
+      d.className = 'cell ' + (i < s.streamIdx + 1 ? 'done' : 'pending');
+      if (i === s.streamIdx) d.classList.add('current');
+      d.textContent = v;
+      sl.appendChild(d);
+    });
+
+    // 日志
+    var lh = $('logHistory');
+    lh.innerHTML = '';
+    for (var i = 1; i <= cur; i++) {
+      var div = document.createElement('div');
+      div.textContent = '第 ' + i + ' 步  ' + steps[i].msg + '  ⇒ 中位数 ' + steps[i].median;
+      if (i === cur) div.className = 'hit';
+      lh.appendChild(div);
+    }
+    lh.scrollTop = lh.scrollHeight;
+
+    $('progressBar').style.width = (cur / (steps.length - 1) * 100) + '%';
+    $('btnNext').disabled = cur >= steps.length - 1;
+    $('btnPrev').disabled = cur <= 0;
+  }
+
+  function stopPlay() {
+    if (timer) { clearInterval(timer); timer = null; $('btnPlay').textContent = '▶ 自动播放'; }
+  }
+
+  $('btnNext').onclick = function () { stopPlay(); if (cur < steps.length - 1) { cur++; render(); } };
+  $('btnPrev').onclick = function () { stopPlay(); if (cur > 0) { cur--; render(); } };
+  $('btnReset').onclick = function () { stopPlay(); cur = 0; render(); };
+  $('btnPlay').onclick = function () {
+    if (timer) { stopPlay(); return; }
+    if (cur >= steps.length - 1) cur = 0;
+    $('btnPlay').textContent = '⏸ 暂停';
+    timer = setInterval(function () {
+      if (cur >= steps.length - 1) { stopPlay(); return; }
+      cur++; render();
+    }, 1600);
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>

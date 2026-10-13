@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 438. 找到字符串中所有字母异位词 — 滑动窗口 图解（按你的思路）</title>
+<style>
+  :root {
+    --bg: #0f1220; --panel: #171b2e; --panel2: #1e2440;
+    --text: #e8eaf6; --muted: #9aa3c7;
+    --accent: #4f8cff; --green: #3ddc97; --red: #ff6b81;
+    --yellow: #ffd166; --purple: #b18cff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7; max-width: 1000px; margin: 0 auto; padding: 32px 24px 80px;
+  }
+  h1 { font-size: 1.65em; margin-bottom: 6px; }
+  h1 .lc-tag {
+    background: var(--green); color: #14322a; font-size: .55em;
+    padding: 2px 10px; border-radius: 6px; vertical-align: middle; margin-right: 10px; font-weight: bold;
+  }
+  h2 { margin: 44px 0 14px; font-size: 1.3em; padding-left: 12px; border-left: 4px solid var(--accent); }
+  p, li { color: var(--muted); }
+  strong, em { color: var(--text); }
+  code { font-family: var(--mono); background: var(--panel2); color: var(--green); padding: 1px 6px; border-radius: 4px; font-size: .92em; }
+  .card { background: var(--panel); border-radius: 14px; padding: 20px 24px; margin: 14px 0; border: 1px solid #262c4a; }
+  .key-insight {
+    background: linear-gradient(135deg, rgba(79,140,255,.12), rgba(177,140,255,.10));
+    border: 1px solid rgba(79,140,255,.35); border-radius: 14px;
+    padding: 18px 22px; margin: 16px 0; font-size: 1.05em;
+  }
+  .key-insight b { color: var(--accent); }
+  table.cmp { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: .95em; }
+  table.cmp td, table.cmp th { border: 1px solid #2c3358; padding: 8px 12px; text-align: left; color: var(--muted); }
+  table.cmp th { color: var(--text); background: var(--panel2); }
+  table.cmp code { font-size: 1em; }
+
+  /* ===== 动画区 ===== */
+  .stage-wrap { background: var(--panel); border: 1px solid #262c4a; border-radius: 16px; padding: 24px; margin: 18px 0; }
+  .eg-select { text-align: center; margin-bottom: 8px; color: var(--muted); font-size: .9em; }
+  .eg-select select { background: var(--panel2); color: var(--text); border: 1px solid #313a63; border-radius: 8px; padding: 6px 12px; font-family: inherit; margin-left: 8px; }
+  .legend { text-align: center; color: var(--muted); font-size: .9em; margin-bottom: 4px; }
+  .array-row { display: flex; gap: 6px; justify-content: center; align-items: center; min-height: 96px; padding: 30px 0 24px; flex-wrap: wrap; }
+  .cell {
+    width: 42px; height: 52px; border-radius: 10px;
+    background: var(--panel2); border: 1px solid #313a63;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 1.1em; font-weight: 600;
+    position: relative; transition: all .45s cubic-bezier(.4,0,.2,1);
+  }
+  .cell .idx { position: absolute; bottom: -20px; font-size: .62em; color: #5b6591; font-weight: 400; }
+  .cell.win { background: rgba(79,140,255,.18); border-color: rgba(79,140,255,.55); color: var(--text); }
+  .cell.dim { opacity: .3; }
+  .cell.lpt { border-color: var(--green); box-shadow: 0 0 10px rgba(61,220,151,.35); }
+  .cell.rpt { border-color: var(--purple); box-shadow: 0 0 10px rgba(177,140,255,.35); }
+  .cell.lpt::before { content: 'L'; position: absolute; top: -24px; left: 8px; color: var(--green); font-size: .75em; font-weight: 700; }
+  .cell.rpt::before { content: 'R'; position: absolute; top: -24px; right: 8px; color: var(--purple); font-size: .75em; font-weight: 700; }
+  .cell.flashHit { background: rgba(255,209,102,.3); border-color: var(--yellow); color: var(--yellow); animation: cellFlash .6s; }
+  .cell.flashDirty { background: rgba(255,107,129,.28); border-color: var(--red); color: var(--red); animation: cellShake .45s; }
+  @keyframes cellFlash { 0% { transform: translateY(-6px); } 50% { transform: translateY(0); } 75% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+  @keyframes cellShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+  .stage-cols { display: flex; gap: 18px; margin-top: 14px; align-items: stretch; flex-wrap: wrap; }
+  .cov-panel { flex: 0 0 320px; background: var(--panel2); border: 1px solid #313a63; border-radius: 12px; padding: 14px 16px; }
+  .cov-panel h3 { font-size: .85em; color: var(--muted); font-weight: 400; margin-bottom: 8px; }
+  .cov-row { display: flex; align-items: center; gap: 8px; font-family: var(--mono); padding: 4px 0; }
+  .cov-row .ch { color: var(--text); font-weight: 700; width: 18px; }
+  .cov-row .bar-track { flex: 1; height: 10px; background: var(--panel); border-radius: 99px; overflow: hidden; }
+  .cov-row .bar { height: 100%; width: 0; background: var(--accent); transition: width .4s; border-radius: 99px; }
+  .cov-row.ok .bar { background: var(--green); }
+  .cov-row.over .bar { background: var(--red); }
+  .cov-row .frac { color: var(--muted); font-size: .82em; min-width: 46px; text-align: right; }
+  .cov-row .mark { width: 34px; text-align: right; color: #5b6591; font-size: .85em; }
+  .cov-row.ok .mark { color: var(--green); }
+  .cov-row.over .mark { color: var(--red); }
+  .len-line {
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed #2c3358;
+    font-family: var(--mono); font-size: .95em; text-align: center;
+  }
+  .len-line .val { color: var(--accent); font-weight: 700; }
+  .len-line.eq .val { color: var(--yellow); }
+  .status-panel { flex: 1; min-width: 280px; }
+  .status-line { font-family: var(--mono); font-size: 1em; min-height: 2.6em; }
+  .res-box {
+    margin-top: 12px; font-family: var(--mono); font-size: 1.05em;
+    background: rgba(255,209,102,.08); border: 1px solid rgba(255,209,102,.45);
+    border-radius: 10px; padding: 8px 14px; color: var(--yellow); min-height: 2.2em;
+  }
+  .res-box .chip {
+    display: inline-block; background: rgba(255,209,102,.18); border: 1px solid var(--yellow);
+    border-radius: 6px; padding: 0 8px; margin-right: 6px; animation: chipIn .45s cubic-bezier(.3,1.6,.5,1);
+  }
+  @keyframes chipIn { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .log-history {
+    margin-top: 16px; max-height: 130px; overflow-y: auto; font-family: var(--mono);
+    font-size: .85em; color: #7c86b3; border-top: 1px dashed #2c3358; padding-top: 10px;
+  }
+  .log-history div { padding: 1px 0; }
+  .log-history .hit { color: var(--yellow); }
+  .log-history .dirty { color: var(--red); }
+  .controls { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; }
+  .controls button {
+    background: var(--panel2); color: var(--text); border: 1px solid #313a63;
+    border-radius: 10px; padding: 8px 18px; font-size: .95em; cursor: pointer;
+    transition: background .2s; font-family: inherit;
+  }
+  .controls button:hover { background: #2a3258; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .progress { flex: 1; max-width: 300px; height: 6px; border-radius: 99px; background: var(--panel2); overflow: hidden; }
+  .progress > div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--purple)); transition: width .3s; }
+  .speed-ctl { color: var(--muted); font-size: .85em; display: flex; align-items: center; gap: 6px; }
+  .speed-ctl select { background: var(--panel2); color: var(--text); border: 1px solid #313a63; border-radius: 6px; padding: 3px 6px; font-family: inherit; }
+  .complexity-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .complexity-row .card { flex: 1; min-width: 240px; margin: 0; }
+  .complexity-row .card .big { font-family: var(--mono); font-size: 1.5em; color: var(--accent); }
+  .footer-note { margin-top: 40px; font-size: .85em; color: #5b6591; text-align: center; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .user-code { font-family: var(--mono); font-size: .9em; background: var(--panel2); border-radius: 10px; padding: 14px 18px; margin: 10px 0; color: var(--muted); overflow-x: auto; white-space: pre; }
+  .user-code .k { color: var(--purple); }
+  .user-code .fn { color: var(--accent); }
+  .user-code .hl { color: var(--yellow); }
+  .user-code .rd { color: var(--red); }
+</style>
+</head>
+<body>
+
+<h1><span class="lc-tag">LC 438</span>找到字符串中所有字母异位词 — 按你的思路图解</h1>
+<p>题目：给定 <code>s</code> 和 <code>p</code>，找出 s 中所有 p 的<b>异位词</b>子串，返回它们的起始索引。<br>
+示例：<code>s = "cbaebabacd"</code>, <code>p = "abc"</code> → <code>[0, 6]</code></p>
+
+<h2>一、你的代码在做什么（三条规则）</h2>
+<div class="user-code">mapP = Counter(p)                  <span class="c"># 需求：p 中每个字符要几个</span>
+<span class="k">for</span> index, ch <span class="k">in</span> enumerate(s):
+    <span class="k">if</span> ch <span class="k">not in</span> mapP:            <span class="rd"># 规则①：脏字符 → 窗口作废，l = index+1</span>
+        windows.clear(); l = index + <span class="hl">1</span>; <span class="k">continue</span>
+    windows[ch] += <span class="hl">1</span>              <span class="c"># 规则②：入窗；若超额 → 收缩到不超额</span>
+    <span class="k">while</span> windows[ch] > mapP[ch]: windows[s[l]] -= <span class="hl">1</span>; l += <span class="hl">1</span>
+    <span class="k">if</span> (index - l + <span class="hl">1</span>) == len(p): <span class="hl"># 规则③：长度恰好 == len(p) → 异位词！</span>
+        res.append(l)</div>
+<div class="key-insight">
+  💡 <b>为什么"无超额 + 长度恰好"就等于异位词？</b>你的算法始终维护一个不变量：<b>窗口内每个字符的数量 ≤ mapP 的需求</b>（入窗后一旦超额立刻收缩）。于是当窗口长度 == <code>len(p)</code> 时：窗口总字符数 == <code>len(p)</code> == mapP 各需求之和，而逐个字符又有 window[c] ≤ need[c] —— 总量相等 + 每项不超 ⇒ <b>每项恰好相等</b>。这就是不用 formed/required 计数器也能判定的原因，妙！
+</div>
+
+<h2>二、动画演示</h2>
+<div class="stage-wrap">
+  <div class="eg-select">
+    选择用例：
+    <select id="egSel">
+      <option value="0">s = "cbaebabacd", p = "abc"</option>
+      <option value="1">s = "abab", p = "ab"</option>
+    </select>
+  </div>
+  <div class="legend">
+    <span style="color:var(--green)">■ L（左端）</span>&nbsp;&nbsp;
+    <span style="color:var(--purple)">■ R（右端）</span>&nbsp;&nbsp;
+    <span style="color:var(--accent)">■ 窗口内</span>&nbsp;&nbsp;
+    <span style="color:var(--yellow)">■ 命中异位词</span>&nbsp;&nbsp;
+    <span style="color:var(--red)">■ 脏字符（不在 p 中）</span>
+  </div>
+
+  <div class="array-row" id="arrayRow"></div>
+
+  <div class="stage-cols">
+    <div class="cov-panel">
+      <h3>窗口计数 vs mapP 需求</h3>
+      <div id="covRows"></div>
+      <div class="len-line" id="lenLine"></div>
+    </div>
+    <div class="status-panel">
+      <div class="status-line" id="statusLine"></div>
+      <div class="res-box" id="resBox"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btnPlay" class="primary">▶ 播放</button>
+    <button id="btnPrev">⏮ 上一步</button>
+    <button id="btnNext">下一步 ⏭</button>
+    <button id="btnReset">↺ 重置</button>
+    <div class="progress"><div id="progressBar"></div></div>
+    <div class="speed-ctl">
+      速度
+      <select id="speedSel">
+        <option value="1800">慢</option>
+        <option value="1000" selected>中</option>
+        <option value="450">快</option>
+      </select>
+    </div>
+  </div>
+  <div class="log-history" id="logHistory"></div>
+</div>
+
+<h2>三、对照动画看三个关键时刻</h2>
+<div class="card">
+  <ul>
+    <li>🔴 <strong>脏字符（规则①）</strong>：动画里 <code>'e'</code> 会以红色晃动出现，整个窗口瞬间熄灭、L 直接跳到它右边——<code>windows.clear()</code> + <code>l = index+1</code>。这是你这份代码很有特色的一步：脏字符直接"封印"了窗口左边界，之后不可能再有跨越它的异位词。</li>
+    <li>🔵 <strong>超额收缩（规则②）</strong>：左面板某个字符的进度条冲过头变<b>红</b>、标记"超!"时，L 立刻右移把它压回去——<code>while windows[ch] > mapP[ch]</code>。收缩后所有条变回蓝/绿。</li>
+    <li>🟡 <strong>长度命中（规则③）</strong>：底部长度指示 <code>窗口长度 == len(p)</code> 的一瞬间，窗口整体闪黄，<code>res</code> 盒子里蹦出起始索引。</li>
+  </ul>
+  <p style="margin-top:8px">注意一个细节：命中判定用的是 <code>index - l + 1 == len(p)</code> 而不是"长度 ≥ len(p)"——因为超额收缩保证了窗口长度永远不会超过 <code>len(p)</code>，所以"恰好等于"就是唯一可能的命中时机。</p>
+</div>
+
+<h2>四、和你之前 LC 76 模板的对比</h2>
+<div class="card">
+  <table class="cmp">
+    <tr><th></th><th>LC 76 formed 模板</th><th>你这份代码（LC 438）</th></tr>
+    <tr><td>覆盖判定</td><td><code>formed == required</code>（计数器）</td><td>不变量：逐字符 ≤ 需求（超额即收缩）</td></tr>
+    <tr><td>命中时机</td><td>覆盖后收缩，途中记录最短</td><td>长度恰好 == <code>len(p)</code> 才记录</td></tr>
+    <tr><td>脏字符处理</td><td>无需特判（窗口照常进出）</td><td>直接清空、L 跳到脏字符右侧</td></tr>
+    <tr><td>适用场景</td><td>窗口长度不定（求最短/最长）</td><td><b>窗口长度固定</b>（= len(p)）</td></tr>
+  </table>
+  <p style="margin-top:10px">两套都是 O(m + n) 标准解。固定长度找异位词时，"不变量 + 长度判定"这版少了 formed 的加减维护，思路更直接；LC 567 字符串的排列（判断是否存在异位词）也可以用同样写法。</p>
+</div>
+
+<h2>五、复杂度</h2>
+<div class="complexity-row">
+  <div class="card">
+    <div class="big">时间 O(m + n)</div>
+    <p>R 扫一遍 s；L 只前进不后退，每个字符最多进出窗口各一次。</p>
+  </div>
+  <div class="card">
+    <div class="big">空间 O(C)</div>
+    <p>C 为字符集大小，两个计数表（ASCII 下可视为 O(1)）。</p>
+  </div>
+</div>
+
+<div class="footer-note">LC 438 · 滑动窗口 · 姊妹题：LC 567 字符串的排列、LC 76 最小覆盖子串（同族模板）</div>
+
+<script>
+/* ================= 步骤生成（严格按 main.py 的流程） ================= */
+const CASES = [
+  { s: "cbaebabacd", p: "abc" },
+  { s: "abab", p: "ab" },
+];
+
+function buildSteps(s, p) {
+  const steps = [];
+  const mapP = new Map();
+  for (const ch of p) mapP.set(ch, (mapP.get(ch) ?? 0) + 1);
+  const chars = [...mapP.keys()];
+  const windows = {};
+  let l = 0;
+  const res = [];
+
+  const push = (phase, note, L, R, flash) => {
+    steps.push({
+      phase, note, l: L ?? -1, r: R ?? -1,
+      flashCells: flash ? flash.cells : null, flashCls: flash ? flash.cls : '',
+      win: { ...windows },
+      wlen: (L != null && R != null && R >= L) ? R - L + 1 : 0,
+      res: [...res],
+      log: [...(steps.length ? steps[steps.length - 1].log : [])],
+    });
+    if (note) steps[steps.length - 1].log.push(note);
+  };
+
+  const needStr = [...mapP].map(([c, v]) => `${c}:${v}`).join(', ');
+  push('init', `mapP = Counter("${p}") = {${needStr}}，窗口为空，l = 0`, -1, -1);
+
+  for (let index = 0; index < s.length; index++) {
+    const ch = s[index];
+
+    if (!mapP.has(ch)) {                              // 规则① 脏字符
+      push('dirty', `'${ch}' 不在 p 中 → windows.clear()，l 跳到 ${index + 1}（它右侧）`,
+        index + 1, index, { cells: [index], cls: 'flashDirty' });
+      for (const k of Object.keys(windows)) delete windows[k];
+      l = index + 1;
+      continue;
+    }
+
+    windows[ch] = (windows[ch] ?? 0) + 1;             // 规则② 入窗
+    const over = windows[ch] > mapP.get(ch);
+    push('add', `R → ${index}：加入 '${ch}'，windows['${ch}'] = ${windows[ch]}${over ? '，超额了！' : ''}`, l, index);
+
+    while (windows[ch] > mapP.get(ch)) {              // 规则② 超额收缩
+      const out = s[l];
+      windows[out]--;
+      l++;
+      push('shrink', `windows['${ch}'] 超额 → 移出 s[${l - 1}] = '${out}'，l → ${l}`, l, index);
+    }
+
+    if (index - l + 1 === p.length) {                 // 规则③ 长度命中
+      res.push(l);
+      const cells = [];
+      for (let i = l; i <= index; i++) cells.push(i);
+      push('hit', `窗口长度 = ${p.length} 且无字符超额 → s[${l}..${index}] 是异位词！res += [${l}]`,
+        l, index, { cells, cls: 'flashHit' });
+    }
+  }
+
+  push('done', `遍历结束：res = [${res.join(', ')}]`, -1, -1);
+  return { steps, chars, mapP };
+}
+
+/* ================= 渲染 ================= */
+const arrayRow = document.getElementById('arrayRow');
+const covRows = document.getElementById('covRows');
+const lenLine = document.getElementById('lenLine');
+const statusLine = document.getElementById('statusLine');
+const resBox = document.getElementById('resBox');
+const logHistory = document.getElementById('logHistory');
+const progressBar = document.getElementById('progressBar');
+
+let s = '', p = '', steps = [], chars = [], mapP = null, cells = [], cur = 0, timer = null;
+
+function setup(caseIdx) {
+  const c = CASES[caseIdx];
+  s = c.s; p = c.p;
+  const built = buildSteps(s, p);
+  steps = built.steps; chars = built.chars; mapP = built.mapP;
+  arrayRow.innerHTML = '';
+  cells = [...s].map((ch, i) => {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    d.innerHTML = `${ch}<span class="idx">${i}</span>`;
+    arrayRow.appendChild(d);
+    return d;
+  });
+  cur = 0;
+  stopPlay();
+  render(0);
+}
+
+function render(k) {
+  const st = steps[k];
+  cells.forEach((c, i) => {
+    c.className = 'cell';
+    if (st.flashCells && st.flashCells.includes(i)) { c.classList.add(st.flashCls); return; }
+    if (st.l >= 0 && i >= st.l && i <= st.r) {
+      c.classList.add('win');
+      if (i === st.l) c.classList.add('lpt');
+      if (i === st.r) c.classList.add('rpt');
+    } else c.classList.add('dim');
+  });
+
+  covRows.innerHTML = chars.map(ch => {
+    const have = st.win[ch] ?? 0, nd = mapP.get(ch);
+    const over = have > nd, ok = have === nd;
+    const w = Math.min(have / nd, 1) * 100;
+    const mark = over ? '超!' : (ok ? '✓' : '－');
+    return `<div class="cov-row ${over ? 'over' : (ok ? 'ok' : '')}">
+      <span class="ch">${ch}</span>
+      <span class="bar-track"><span class="bar" style="width:${w}%"></span></span>
+      <span class="frac">${have}/${nd}</span>
+      <span class="mark">${mark}</span></div>`;
+  }).join('');
+
+  const eq = st.wlen === p.length;
+  lenLine.className = 'len-line' + (eq ? ' eq' : '');
+  lenLine.innerHTML = `窗口长度 = <span class="val">${st.wlen}</span> / ${p.length}`
+    + (eq ? ' &nbsp;== len(p) → 命中！' : '');
+
+  statusLine.innerHTML = st.note || '';
+  resBox.innerHTML = 'res = [' + (st.res.length
+    ? st.res.map(v => `<span class="chip">${v}</span>`).join('')
+    : '<span style="color:#5b6591">暂无</span>') + ']';
+
+  logHistory.innerHTML = st.log.slice(-40).map(l =>
+    l.startsWith('窗口长度') ? `<div class="hit">${l}</div>`
+    : l.startsWith("'") && l.includes('不在 p 中') ? `<div class="dirty">${l}</div>`
+    : `<div>${l}</div>`).join('');
+  logHistory.scrollTop = logHistory.scrollHeight;
+  progressBar.style.width = ((k + 1) / steps.length * 100) + '%';
+}
+
+/* ================= 播放控制 ================= */
+const btnPlay = document.getElementById('btnPlay');
+function stopPlay() { clearInterval(timer); timer = null; btnPlay.textContent = '▶ 播放'; }
+
+btnPlay.onclick = () => {
+  if (timer) { stopPlay(); return; }
+  if (cur >= steps.length - 1) cur = 0;
+  btnPlay.textContent = '⏸ 暂停';
+  timer = setInterval(() => {
+    if (cur < steps.length - 1) { cur++; render(cur); }
+    else stopPlay();
+  }, +document.getElementById('speedSel').value);
+};
+document.getElementById('btnNext').onclick = () => { stopPlay(); if (cur < steps.length - 1) { cur++; render(cur); } };
+document.getElementById('btnPrev').onclick = () => { stopPlay(); if (cur > 0) { cur--; render(cur); } };
+document.getElementById('btnReset').onclick = () => { stopPlay(); cur = 0; render(0); };
+document.getElementById('egSel').onchange = e => setup(+e.target.value);
+
+setup(0);
+</script>
+</body>
+</html>

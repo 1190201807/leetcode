@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 72. 编辑距离 — 图解动态规划</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171b2e;
+    --panel2: #1e2440;
+    --text: #e8eaf6;
+    --muted: #9aa3c7;
+    --accent: #4f8cff;
+    --green: #3ddc97;
+    --red: #ff6b81;
+    --yellow: #ffd166;
+    --purple: #b18cff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  h1 { font-size: 1.7em; margin-bottom: 6px; }
+  h1 .lc-tag {
+    background: var(--yellow); color: #333; font-size: .55em;
+    padding: 2px 10px; border-radius: 6px; vertical-align: middle; margin-right: 10px;
+    font-weight: bold;
+  }
+  h2 {
+    margin: 44px 0 14px; font-size: 1.3em;
+    padding-left: 12px; border-left: 4px solid var(--accent);
+  }
+  h3 { margin: 20px 0 8px; font-size: 1.05em; color: var(--text); }
+  p, li { color: var(--muted); }
+  strong, em { color: var(--text); }
+  code {
+    font-family: var(--mono);
+    background: var(--panel2); color: var(--green);
+    padding: 1px 6px; border-radius: 4px; font-size: .92em;
+  }
+  pre {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 14px; padding: 18px 22px; margin: 14px 0;
+    font-family: var(--mono); font-size: .9em; line-height: 1.65;
+    overflow-x: auto; color: #c6cdf0;
+  }
+  pre .kw { color: var(--purple); }
+  pre .fn { color: var(--accent); }
+  pre .num { color: var(--yellow); }
+  pre .cm { color: #6b7499; }
+  .card {
+    background: var(--panel); border-radius: 14px;
+    padding: 20px 24px; margin: 14px 0;
+    border: 1px solid #262c4a;
+  }
+  .complexity-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .complexity-row .card { flex: 1; min-width: 240px; margin: 0; position: relative; overflow: hidden; }
+  .complexity-row .card .big {
+    font-family: var(--mono); font-size: 1.5em; color: var(--accent);
+  }
+  .complexity-row .card .tag {
+    position: absolute; top: 12px; right: 14px; font-size: .8em;
+    padding: 1px 8px; border-radius: 99px;
+  }
+  .tag.ok { background: rgba(61,220,151,.15); color: var(--green); }
+  .tag.mid { background: rgba(255,209,102,.15); color: var(--yellow); }
+  .key-insight {
+    background: linear-gradient(135deg, rgba(79,140,255,.12), rgba(177,140,255,.10));
+    border: 1px solid rgba(79,140,255,.35);
+    border-radius: 14px; padding: 18px 22px; margin: 16px 0;
+    font-size: 1.05em;
+  }
+  .key-insight b { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: .95em; }
+  th, td {
+    border: 1px solid #2c3358; padding: 8px 14px;
+    text-align: left; color: var(--muted);
+  }
+  th { background: var(--panel2); color: var(--text); }
+  .mono { font-family: var(--mono); }
+  td .good { color: var(--green); }
+  td .bad { color: var(--red); }
+
+  /* ===== 动画区：DP 表格 ===== */
+  .stage-wrap {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 16px; padding: 24px; margin: 18px 0;
+    overflow-x: auto;
+  }
+  .dp-table {
+    border-collapse: collapse; margin: 10px auto 0;
+    font-family: var(--mono);
+  }
+  .dp-table td, .dp-table th {
+    width: 52px; height: 46px; text-align: center;
+    border: 1px solid #2c3358; font-size: 1.02em;
+    background: var(--panel2); color: #c6cdf0;
+    transition: all .35s cubic-bezier(.4,0,.2,1);
+    position: relative; padding: 0;
+  }
+  .dp-table th { background: transparent; color: var(--muted); font-weight: 700; }
+  .dp-table td.head { background: transparent; color: var(--purple); font-weight: 700; }
+  .dp-table td.base { background: rgba(79,140,255,.14); color: var(--accent); }
+  .dp-table td.diag { background: rgba(177,140,255,.25); border-color: var(--purple); color: var(--purple); }
+  .dp-table td.up   { background: rgba(79,140,255,.22); border-color: var(--accent); color: var(--accent); }
+  .dp-table td.left { background: rgba(61,220,151,.20); border-color: var(--green); color: var(--green); }
+  .dp-table td.cur {
+    background: rgba(255,209,102,.28); border-color: var(--yellow); color: var(--yellow);
+    transform: scale(1.12); font-weight: 700; z-index: 2;
+  }
+  .dp-table td.path { background: rgba(61,220,151,.28); border-color: var(--green); color: var(--green); font-weight: 700; }
+  .dp-table td.chosen-diag { box-shadow: inset 0 0 0 2px var(--purple); }
+  .dp-table td.chosen-up   { box-shadow: inset 0 0 0 2px var(--accent); }
+  .dp-table td.chosen-left { box-shadow: inset 0 0 0 2px var(--green); }
+  .legend {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    margin-top: 18px; font-size: .82em; color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i {
+    width: 14px; height: 14px; border-radius: 4px; display: inline-block;
+  }
+  .result-badge {
+    text-align: center; margin: 22px 0 4px;
+    font-family: var(--mono); font-size: 1.2em; min-height: 1.6em;
+  }
+  .result-badge .val { color: var(--yellow); font-weight: 700; }
+  .action-line {
+    text-align: center; margin-top: 8px; color: var(--muted);
+    font-size: .95em; min-height: 1.6em;
+  }
+  .action-line .ch { color: var(--purple); font-family: var(--mono); font-weight: 700; }
+  .controls {
+    display: flex; justify-content: center; align-items: center; gap: 12px;
+    margin-top: 20px; flex-wrap: wrap;
+  }
+  .controls button {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid #313a63; border-radius: 10px;
+    padding: 8px 18px; font-size: .95em; cursor: pointer;
+    transition: background .2s; font-family: inherit;
+  }
+  .controls button:hover { background: #2a3258; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .progress {
+    flex: 1; max-width: 300px; height: 6px; border-radius: 99px;
+    background: var(--panel2); overflow: hidden;
+  }
+  .progress > div {
+    height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--purple));
+    transition: width .3s;
+  }
+  .case-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .case-row button { font-family: var(--mono); }
+  .log-history {
+    margin-top: 16px; max-height: 170px; overflow-y: auto;
+    font-family: var(--mono); font-size: .85em; color: #7c86b3;
+    border-top: 1px dashed #2c3358; padding-top: 10px;
+  }
+  .log-history div { padding: 1px 0; }
+  .log-history .hit { color: var(--yellow); }
+  .footer-note { text-align: center; color: #5b6591; font-size: .85em; margin-top: 50px; }
+</style>
+</head>
+<body>
+
+<h1><span class="lc-tag">LeetCode 72 中等</span>编辑距离 — 图解动态规划</h1>
+<p>把 word1 变成 word2 的最少操作数（插入 / 删除 / 替换各算一步）——经典二维 DP，也是"双字符串 DP"的原型题。</p>
+
+<h2>一、题目回顾</h2>
+<div class="card">
+  <ul>
+    <li><span class="mono">horse → ros</span>：3 步（替换 h→r，删 r…，删 e），见下方动画逐步验证</li>
+    <li><span class="mono">intention → execution</span>：5 步</li>
+  </ul>
+  <p><strong>难点：</strong>操作可以发生在任意位置，暴力枚举所有编辑序列是指数级；必须找到"规模更小的同款问题"。</p>
+</div>
+
+<h2>二、状态定义：只看"前缀"，规模立刻缩小</h2>
+<div class="key-insight">
+  <b>核心洞察：</b>不要纠结"整串怎么变"，只问——<b>把 word1 的前 i 个字符变成 word2 的前 j 个字符</b>，最少几步？
+  这就是状态 <code>dp[i][j]</code>。一旦把问题钉在"前缀对前缀"上，任何一步操作都只牵动 <b>i 或 j 的边缘一格</b>，转移方程水到渠成。
+  答案 = <code>dp[m][n]</code>（m、n 为两串长度）。
+</div>
+<div class="card">
+  <h3>边界（表格的第 0 行、第 0 列）</h3>
+  <ul>
+    <li><code>dp[0][j] = j</code>：空串变成 word2 的前 j 个字符，只能连插 j 次</li>
+    <li><code>dp[i][0] = i</code>：word1 的前 i 个字符变成空串，只能连删 i 次</li>
+  </ul>
+</div>
+
+<h2>三、状态转移：盯住两个串的"最后一个字符"</h2>
+<div class="card">
+  <p>比较 <code>word1[i-1]</code> 与 <code>word2[j-1]</code>（前缀的末尾字符）：</p>
+  <h3>情形 A：两字符相等 —— 白嫖一步</h3>
+  <p><code>dp[i][j] = dp[i-1][j-1]</code>。末尾已经一样，无需任何操作，问题直接缩成"前 i-1 → 前 j-1"。<br>
+  <em>注意是照抄而不是 +1，相等是免费的。</em></p>
+  <h3>情形 B：两字符不同 —— 三选一，各付 1 步</h3>
+  <table>
+    <tr><th>选择</th><th>操作</th><th>为什么对应这个子问题</th></tr>
+    <tr>
+      <td class="mono good">dp[i][j-1] + 1</td>
+      <td><strong>插入</strong></td>
+      <td>在 word1 末尾插入 word2[j-1]，末尾对齐 → 剩下 word1[:i] → word2[:j-1]</td>
+    </tr>
+    <tr>
+      <td class="mono" style="color:var(--accent)">dp[i-1][j] + 1</td>
+      <td><strong>删除</strong></td>
+      <td>删掉 word1[i-1]，末尾消掉 → 剩下 word1[:i-1] → word2[:j]</td>
+    </tr>
+    <tr>
+      <td class="mono" style="color:var(--purple)">dp[i-1][j-1] + 1</td>
+      <td><strong>替换</strong></td>
+      <td>把 word1[i-1] 改成 word2[j-1]，末尾同时消掉 → 剩下 word1[:i-1] → word2[:j-1]</td>
+    </tr>
+  </table>
+  <p><code>dp[i][j] = min(三者)</code>。三种操作"各管各的后缀消去方式"，恰好完备、互不重叠。</p>
+</div>
+
+<div class="stage-wrap">
+  <div class="case-row" id="caseRow"></div>
+  <div id="tableHost"></div>
+  <div class="legend">
+    <span><i style="background:rgba(177,140,255,.25)"></i>左上（替换 / 相等）</span>
+    <span><i style="background:rgba(79,140,255,.22)"></i>上方（删除）</span>
+    <span><i style="background:rgba(61,220,151,.2)"></i>左方（插入）</span>
+    <span><i style="background:rgba(255,209,102,.28)"></i>当前格</span>
+    <span><i style="background:rgba(61,220,151,.28)"></i>最优路径</span>
+  </div>
+  <div class="result-badge" id="resultBadge">—</div>
+  <div class="action-line" id="actionLine">选择示例，点击「下一步」逐格填表</div>
+  <div class="controls">
+    <button id="btnReset">↺ 重置</button>
+    <button id="btnPrev">‹ 上一步</button>
+    <button id="btnNext" class="primary">下一步 ›</button>
+    <button id="btnPlay">▶ 自动播放</button>
+    <button id="btnSkip">⏭ 直达结果</button>
+    <div class="progress"><div id="progressBar"></div></div>
+  </div>
+  <div class="log-history" id="logHistory"></div>
+</div>
+
+<h2>四、Python 实现</h2>
+<pre><span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">minDistance</span>(self, word1: str, word2: str) -> int:
+        m, n = len(word1), len(word2)
+        <span class="cm"># dp[i][j]：word1 前 i 个字符 → word2 前 j 个字符的最少操作数</span>
+        dp = [[<span class="num">0</span>] * (n + <span class="num">1</span>) <span class="kw">for</span> _ <span class="kw">in</span> range(m + <span class="num">1</span>)]
+
+        <span class="cm"># 边界：空串 ↔ 前缀</span>
+        <span class="kw">for</span> j <span class="kw">in</span> range(n + <span class="num">1</span>):
+            dp[<span class="num">0</span>][j] = j          <span class="cm"># 连插 j 次</span>
+        <span class="kw">for</span> i <span class="kw">in</span> range(m + <span class="num">1</span>):
+            dp[i][<span class="num">0</span>] = i          <span class="cm"># 连删 i 次</span>
+
+        <span class="kw">for</span> i <span class="kw">in</span> range(<span class="num">1</span>, m + <span class="num">1</span>):
+            <span class="kw">for</span> j <span class="kw">in</span> range(<span class="num">1</span>, n + <span class="num">1</span>):
+                <span class="kw">if</span> word1[i - <span class="num">1</span>] == word2[j - <span class="num">1</span>]:
+                    dp[i][j] = dp[i - <span class="num">1</span>][j - <span class="num">1</span>]          <span class="cm"># 末尾相等，免费</span>
+                <span class="kw">else</span>:
+                    dp[i][j] = <span class="fn">min</span>(
+                        dp[i - <span class="num">1</span>][j - <span class="num">1</span>] + <span class="num">1</span>,            <span class="cm"># 替换</span>
+                        dp[i - <span class="num">1</span>][j] + <span class="num">1</span>,                <span class="cm"># 删除</span>
+                        dp[i][j - <span class="num">1</span>] + <span class="num">1</span>,                <span class="cm"># 插入</span>
+                    )
+        <span class="kw">return</span> dp[m][n]</pre>
+
+<h2>五、horse → ros 的填表结果</h2>
+<div class="card">
+  <table style="width:auto;margin:0 auto;">
+    <tr><th class="mono">dp</th><th class="mono">""</th><th class="mono">r</th><th class="mono">o</th><th class="mono">s</th></tr>
+    <tr><th class="mono">""</th><td class="mono">0</td><td class="mono">1</td><td class="mono">2</td><td class="mono">3</td></tr>
+    <tr><th class="mono">h</th><td class="mono">1</td><td class="mono good">1</td><td class="mono">2</td><td class="mono">3</td></tr>
+    <tr><th class="mono">o</th><td class="mono">2</td><td class="mono">1</td><td class="mono good">1</td><td class="mono">2</td></tr>
+    <tr><th class="mono">r</th><td class="mono">3</td><td class="mono">1</td><td class="mono">2</td><td class="mono good">2</td></tr>
+    <tr><th class="mono">s</th><td class="mono">4</td><td class="mono">2</td><td class="mono">2</td><td class="mono good">2</td></tr>
+    <tr><th class="mono">e</th><td class="mono">5</td><td class="mono">2</td><td class="mono">3</td><td class="mono good">3</td></tr>
+  </table>
+  <p style="text-align:center;margin-top:10px;">答案 <code>dp[5][3] = 3</code>。沿表格从右下角往左上角回溯，就能还原出一条具体编辑路径（替换 → 删除 → 删除）。</p>
+</div>
+
+<h2>六、复杂度分析</h2>
+<div class="complexity-row">
+  <div class="card">
+    <span class="tag mid">时间</span>
+    <div class="big">O(m·n)</div>
+    <p>每个 (i, j) 格子计算一次，每次 O(1)。</p>
+  </div>
+  <div class="card">
+    <span class="tag mid">空间</span>
+    <div class="big">O(m·n)</div>
+    <p>整张表；观察到 dp[i][j] 只依赖上一行与当前行左格，可用<strong>滚动数组压缩到 O(n)</strong>（从右往左更新一维数组）。</p>
+  </div>
+  <div class="card">
+    <span class="tag ok">优于暴力</span>
+    <div class="big">指数 → 多项式</div>
+    <p>暴力枚举编辑序列是指数级；DP 把重复子问题（同一对前缀被反复求解）缓存下来。</p>
+  </div>
+</div>
+
+<h2>七、常见疑问与拓展</h2>
+<div class="card">
+  <ul>
+    <li><strong>Q：为什么"相等"时不用再考虑插入/删除？</strong><br>
+      数学上可证相等时 <code>dp[i-1][j-1] ≤ min(dp[i-1][j], dp[i][j-1], 其他)+1</code> 恒成立，照抄左上一定不亏；直觉上，末尾白得一个匹配没有任何理由放弃它。</li>
+    <li><strong>Q：怎么还原出具体做了哪些操作？</strong><br>
+      从 <code>dp[m][n]</code> 往回走：值等于左上 → 相等或替换；等于上+1 → 删除；等于左+1 → 插入。动画最后一步的绿色路径就是这条回溯线。</li>
+    <li><strong>Q：这题的通用变体？</strong><br>
+      把三种操作的代价改成不同权重（替换 2、插入删除 1 等），转移方程里把对应 +1 改成 +cost 即可；只允许删除时退化为"最长公共子序列"（LC 1143）。</li>
+    <li><strong>相关题目：</strong>LC 1143 最长公共子序列（同款骨架）、LC 583 两个字符串的删除操作、LC 712 两个字符串的最小 ASCII 删除和、LC 44 通配符匹配（双字符串 DP）。</li>
+  </ul>
+</div>
+
+<p class="footer-note">双字符串 DP 模板：dp[i][j] 定前缀 → 末尾相等抄左上，否则左上/上/左三选一。</p>
+
+<script>
+(function () {
+  var CASES = {
+    'horse → ros': ['horse', 'ros'],
+    'intention → execution': ['intention', 'execution'],
+    'abc → abc': ['abc', 'abc'],
+    'a → ab': ['a', 'ab']
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var w1, w2, steps, cur, timer = null;
+
+  // ===== 构建填表步骤 =====
+  function buildSteps(a, b) {
+    var m = a.length, n = b.length;
+    var dp = [];
+    for (var i = 0; i <= m; i++) dp.push(new Array(n + 1).fill(null));
+
+    var steps = [];
+    function snap(msg, curCell, mode, chosen) {
+      steps.push({
+        dp: dp.map(function (r) { return r.slice(); }),
+        msg: msg, cur: curCell, mode: mode, chosen: chosen || null
+      });
+    }
+    snap('空表开始：行是 word1「' + a + '」的前缀，列是 word2「' + b + '」的前缀');
+
+    for (var j = 1; j <= n; j++) dp[0][j] = j;
+    for (var i2 = 1; i2 <= m; i2++) dp[i2][0] = i2;
+    snap('填边界：dp[0][j]=j（空串连插 j 次），dp[i][0]=i（连删 i 次）');
+
+    for (var i3 = 1; i3 <= m; i3++) {
+      for (var j3 = 1; j3 <= n; j3++) {
+        var ca = a[i3 - 1], cb = b[j3 - 1];
+        if (ca === cb) {
+          dp[i3][j3] = dp[i3 - 1][j3 - 1];
+          snap('word1[' + (i3 - 1) + ']=<span class="ch">' + ca + '</span> 与 word2[' + (j3 - 1) + ']=<span class="ch">' + cb + '</span> 相等：免费，照抄左上 dp=' + dp[i3][j3],
+            [i3, j3], 'diag');
+        } else {
+          var r = dp[i3 - 1][j3 - 1] + 1, u = dp[i3 - 1][j3] + 1, l = dp[i3][j3 - 1] + 1;
+          var best = Math.min(r, u, l);
+          dp[i3][j3] = best;
+          var chosen = (best === r) ? 'diag' : (best === u ? 'up' : 'left');
+          var opName = chosen === 'diag' ? '替换' : (chosen === 'up' ? '删除' : '插入');
+          snap('word1[' + (i3 - 1) + ']=<span class="ch">' + ca + '</span> ≠ word2[' + (j3 - 1) + ']=<span class="ch">' + cb + '</span>：替换' + r + ' / 删除' + u + ' / 插入' + l + '，取最小 → ' + opName + '，dp=' + best,
+            [i3, j3], 'all', chosen);
+        }
+      }
+    }
+    snap('填表完成！dp[' + m + '][' + n + '] = ' + dp[m][n] + '，即最少操作数');
+
+    // 回溯最优路径
+    var path = [];
+    var pi = m, pj = n;
+    while (pi > 0 || pj > 0) {
+      path.push([pi, pj]);
+      if (pi > 0 && pj > 0 && dp[pi][pj] === dp[pi - 1][pj - 1] && (a[pi - 1] === b[pj - 1] || dp[pi][pj] === dp[pi - 1][pj - 1] + 1 && dp[pi][pj] !== dp[pi - 1][pj] + 1 && dp[pi][pj] !== dp[pi][pj - 1] + 1)) pi--, pj--;
+      else if (pi > 0 && dp[pi][pj] === dp[pi - 1][pj] + 1) pi--;
+      else if (pj > 0 && dp[pi][pj] === dp[pi][pj - 1] + 1) pj--;
+      else { pi--; pj--; }
+    }
+    steps.push({ dp: dp.map(function (r) { return r.slice(); }), msg: '回溯出一条最优编辑路径（绿色）', path: path, mode: 'path' });
+    return steps;
+  }
+
+  // ===== 渲染 =====
+  function render() {
+    var s = steps[cur];
+    var host = $('tableHost');
+    var tbl = '<table class="dp-table"><tr><th class="mono">dp</th><th class="mono">""</th>';
+    for (var j = 0; j < w2.length; j++) tbl += '<th class="mono">' + w2[j] + '</th>';
+    tbl += '</tr>';
+    for (var i = 0; i <= w1.length; i++) {
+      tbl += '<tr><td class="mono head">' + (i === 0 ? '""' : w1[i - 1]) + '</td>';
+      for (var j2 = 0; j2 <= w2.length; j2++) {
+        var cls = 'mono', v = s.dp[i][j2];
+        if (i === 0 || j2 === 0) cls += (v !== null ? ' base' : '');
+        if (s.cur && s.cur[0] === i && s.cur[1] === j2) cls += ' cur';
+        if (s.mode === 'diag' && s.cur && i === s.cur[0] - 1 && j2 === s.cur[1] - 1) cls += ' diag';
+        if (s.mode === 'all') {
+          if (s.cur && i === s.cur[0] - 1 && j2 === s.cur[1] - 1) cls += ' diag';
+          if (s.cur && i === s.cur[0] - 1 && j2 === s.cur[1]) cls += ' up';
+          if (s.cur && i === s.cur[0] && j2 === s.cur[1] - 1) cls += ' left';
+        }
+        if (s.chosen && s.cur) {
+          if (s.chosen === 'diag' && i === s.cur[0] - 1 && j2 === s.cur[1] - 1) cls += ' chosen-diag';
+          if (s.chosen === 'up' && i === s.cur[0] - 1 && j2 === s.cur[1]) cls += ' chosen-up';
+          if (s.chosen === 'left' && i === s.cur[0] && j2 === s.cur[1] - 1) cls += ' chosen-left';
+        }
+        if (s.path && s.path.some(function (p) { return p[0] === i && p[1] === j2; })) cls += ' path';
+        tbl += '<td class="' + cls + '">' + (v === null ? '·' : v) + '</td>';
+      }
+      tbl += '</tr>';
+    }
+    tbl += '</table>';
+    host.innerHTML = tbl;
+
+    if (s.cur || s.mode === 'path') {
+      $('resultBadge').innerHTML = '正在处理 / 已完成 — 当前表值见黄色格';
+    } else if (cur === 0) {
+      $('resultBadge').textContent = '—';
+    }
+    if (s.mode === 'path' || cur === steps.length - 2) {
+      $('resultBadge').innerHTML = '最少操作数 = <span class="val">' + w1.length + '×' + w2.length + ' 表右下角 ' + s.dp[w1.length][w2.length] + '</span>';
+    }
+    $('actionLine').innerHTML = s.msg;
+
+    $('progressBar').style.width = (cur / (steps.length - 1) * 100) + '%';
+    var lh = $('logHistory');
+    lh.innerHTML = '';
+    for (var k = 0; k <= cur; k++) {
+      var div = document.createElement('div');
+      div.innerHTML = '第 ' + k + ' 步  ' + steps[k].msg;
+      if (k === cur) div.className = 'hit';
+      lh.appendChild(div);
+    }
+    lh.scrollTop = lh.scrollHeight;
+    $('btnNext').disabled = cur >= steps.length - 1;
+    $('btnPrev').disabled = cur <= 0;
+  }
+
+  function stopPlay() {
+    if (timer) { clearInterval(timer); timer = null; $('btnPlay').textContent = '▶ 自动播放'; }
+  }
+
+  function loadCase(name) {
+    stopPlay();
+    w1 = CASES[name][0]; w2 = CASES[name][1];
+    steps = buildSteps(w1, w2);
+    cur = 0;
+    render();
+  }
+
+  var cr = $('caseRow');
+  Object.keys(CASES).forEach(function (name, idx) {
+    var b = document.createElement('button');
+    b.textContent = name;
+    if (idx === 0) b.classList.add('primary');
+    b.onclick = function () {
+      cr.querySelectorAll('button').forEach(function (x) { x.classList.remove('primary'); });
+      b.classList.add('primary');
+      loadCase(name);
+    };
+    cr.appendChild(b);
+  });
+
+  $('btnNext').onclick = function () { stopPlay(); if (cur < steps.length - 1) { cur++; render(); } };
+  $('btnPrev').onclick = function () { stopPlay(); if (cur > 0) { cur--; render(); } };
+  $('btnReset').onclick = function () { stopPlay(); cur = 0; render(); };
+  $('btnSkip').onclick = function () { stopPlay(); cur = steps.length - 1; render(); };
+  $('btnPlay').onclick = function () {
+    if (timer) { stopPlay(); return; }
+    if (cur >= steps.length - 1) cur = 0;
+    $('btnPlay').textContent = '⏸ 暂停';
+    timer = setInterval(function () {
+      if (cur >= steps.length - 1) { stopPlay(); return; }
+      cur++; render();
+    }, 1100);
+  };
+
+  loadCase('horse → ros');
+})();
+</script>
+</body>
+</html>

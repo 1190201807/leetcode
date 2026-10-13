@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 31. 下一个排列 — 图解</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171b2e;
+    --panel2: #1e2440;
+    --text: #e8eaf6;
+    --muted: #9aa3c7;
+    --accent: #4f8cff;
+    --green: #3ddc97;
+    --red: #ff6b81;
+    --yellow: #ffd166;
+    --purple: #b18cff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  h1 { font-size: 1.7em; margin-bottom: 6px; }
+  h1 .lc-tag {
+    background: var(--yellow); color: #333; font-size: .55em;
+    padding: 2px 10px; border-radius: 6px; vertical-align: middle; margin-right: 10px;
+    font-weight: bold;
+  }
+  h2 {
+    margin: 44px 0 14px; font-size: 1.3em;
+    padding-left: 12px; border-left: 4px solid var(--accent);
+  }
+  h3 { margin: 20px 0 8px; font-size: 1.05em; color: var(--text); }
+  p, li { color: var(--muted); }
+  strong, em { color: var(--text); }
+  code {
+    font-family: var(--mono);
+    background: var(--panel2); color: var(--green);
+    padding: 1px 6px; border-radius: 4px; font-size: .92em;
+  }
+  pre {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 14px; padding: 18px 22px; margin: 14px 0;
+    font-family: var(--mono); font-size: .9em; line-height: 1.65;
+    overflow-x: auto; color: #c6cdf0;
+  }
+  pre .kw { color: var(--purple); }
+  pre .fn { color: var(--accent); }
+  pre .num { color: var(--yellow); }
+  pre .cm { color: #6b7499; }
+  .card {
+    background: var(--panel); border-radius: 14px;
+    padding: 20px 24px; margin: 14px 0;
+    border: 1px solid #262c4a;
+  }
+  .complexity-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .complexity-row .card { flex: 1; min-width: 240px; margin: 0; position: relative; overflow: hidden; }
+  .complexity-row .card .big {
+    font-family: var(--mono); font-size: 1.5em; color: var(--accent);
+  }
+  .complexity-row .card .tag {
+    position: absolute; top: 12px; right: 14px; font-size: .8em;
+    padding: 1px 8px; border-radius: 99px;
+  }
+  .tag.ok { background: rgba(61,220,151,.15); color: var(--green); }
+  .tag.mid { background: rgba(255,209,102,.15); color: var(--yellow); }
+  .key-insight {
+    background: linear-gradient(135deg, rgba(79,140,255,.12), rgba(177,140,255,.10));
+    border: 1px solid rgba(79,140,255,.35);
+    border-radius: 14px; padding: 18px 22px; margin: 16px 0;
+    font-size: 1.05em;
+  }
+  .key-insight b { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: .95em; }
+  th, td {
+    border: 1px solid #2c3358; padding: 8px 14px;
+    text-align: left; color: var(--muted);
+  }
+  th { background: var(--panel2); color: var(--text); }
+  .mono { font-family: var(--mono); }
+  td .good { color: var(--green); }
+  td .bad { color: var(--red); }
+
+  /* ===== 动画区 ===== */
+  .stage-wrap {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 16px; padding: 24px; margin: 18px 0;
+  }
+  .array-row {
+    display: flex; gap: 8px; justify-content: center;
+    align-items: flex-end; padding: 10px 0 0; min-height: 130px; flex-wrap: wrap;
+  }
+  .cell {
+    width: 50px; height: 50px; border-radius: 10px;
+    background: var(--panel2); border: 1px solid #313a63;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 1.15em; font-weight: 600;
+    position: relative; transition: all .45s cubic-bezier(.4,0,.2,1);
+  }
+  .cell .idx {
+    position: absolute; bottom: -20px; font-size: .62em; color: #5b6591;
+    font-weight: 400;
+  }
+  .cell.pivot { background: rgba(177,140,255,.22); border-color: var(--purple); color: var(--purple); transform: translateY(-8px); }
+  .cell.target { background: rgba(61,220,151,.20); border-color: var(--green); color: var(--green); }
+  .cell.scan  { background: rgba(79,140,255,.20); border-color: var(--accent); color: var(--accent); }
+  .cell.swap  { background: rgba(255,209,102,.25); border-color: var(--yellow); color: var(--yellow); transform: translateY(-8px); }
+  .cell.suffix { background: rgba(255,209,102,.10); border-style: dashed; }
+  .arrow-label {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    font-size: .68em; white-space: nowrap; font-family: var(--mono); font-weight: 700;
+    transition: all .45s cubic-bezier(.4,0,.2,1);
+  }
+  .arrow-label.p { color: var(--purple); }
+  .arrow-label.t { color: var(--green); }
+  .arrow-label.s { color: var(--accent); }
+
+  .status-line {
+    text-align: center; margin-top: 46px; font-family: var(--mono);
+    font-size: 1.02em; min-height: 1.6em; color: var(--muted);
+  }
+  .status-line .hl-p { color: var(--purple); }
+  .status-line .hl-t { color: var(--green); }
+  .action-line {
+    text-align: center; margin-top: 8px; color: var(--muted);
+    font-size: .95em; min-height: 1.6em;
+  }
+  .action-line .num-hl { color: var(--yellow); font-family: var(--mono); font-weight: 700; }
+  .controls {
+    display: flex; justify-content: center; align-items: center; gap: 12px;
+    margin-top: 20px; flex-wrap: wrap;
+  }
+  .controls button {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid #313a63; border-radius: 10px;
+    padding: 8px 18px; font-size: .95em; cursor: pointer;
+    transition: background .2s; font-family: inherit;
+  }
+  .controls button:hover { background: #2a3258; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .progress {
+    flex: 1; max-width: 300px; height: 6px; border-radius: 99px;
+    background: var(--panel2); overflow: hidden;
+  }
+  .progress > div {
+    height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--purple));
+    transition: width .3s;
+  }
+  .case-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+  .case-row button { font-family: var(--mono); }
+  .log-history {
+    margin-top: 16px; max-height: 150px; overflow-y: auto;
+    font-family: var(--mono); font-size: .85em; color: #7c86b3;
+    border-top: 1px dashed #2c3358; padding-top: 10px;
+  }
+  .log-history div { padding: 1px 0; }
+  .log-history .hit { color: var(--yellow); }
+  .footer-note { text-align: center; color: #5b6591; font-size: .85em; margin-top: 50px; }
+</style>
+</head>
+<body>
+
+<h1><span class="lc-tag">LeetCode 31 中等</span>下一个排列 — 图解</h1>
+<p>把数组重排成字典序紧接着它的下一个更大的排列；若已是最最大（整体降序），则重排为最小排列（整体升序）。要求原地修改、常数空间。</p>
+
+<h2>一、题目回顾</h2>
+<div class="card">
+  <ul>
+    <li><span class="mono">[1,2,3] → [1,3,2]</span>：先让最后一位变大，代价最小</li>
+    <li><span class="mono">[2,3,1] → [3,1,2]</span>：末尾 1 无法变大，动倒数第二位；2 变 3 后，把后面排成最小</li>
+    <li><span class="mono">[3,2,1] → [1,2,3]</span>：整体降序 = 已是最大排列，回到最小</li>
+  </ul>
+  <p>规律已经浮现：<strong>下一个排列 = 在尽量靠右的位置做一次"变大"，然后把变动位置之后的部分排成最小。</strong></p>
+</div>
+
+<h2>二、核心洞察</h2>
+<div class="key-insight">
+  <b>洞察 1（降序后缀已是最大）：</b>从右往左看，如果某段后缀是<strong>严格降序</strong>（如 7,6,5,3,1），那么这段后缀无论怎么内部重排都不可能更大——它是自己能达到的最大排列。想变大，<b>只能动降序后缀左边第一个数</b>（拐点）。<br>
+  <b>洞察 2（换"大于它的最小者"）：</b>拐点要变大，应换成后缀中<b>比它大的数里最小的那个</b>——只涨一点点，涨多了就越级到"下下个排列"了。<br>
+  <b>洞察 3（反转即最小）：</b>交换后，后缀依然是降序的，<b>降序的反面就是升序</b>——直接原地反转后缀，就得到后缀的最小排列，无需排序。
+</div>
+
+<h2>三、算法三步走</h2>
+<div class="card">
+  <h3>第 ① 步：从右往左找拐点 i</h3>
+  <p>找第一个满足 <code>nums[i] &lt; nums[i+1]</code> 的位置。此时 <code>[i+1, end]</code> 是降序后缀（最大排列），<code>nums[i]</code> 是唯一能"带增量"的位置。若整趟都找不到（整体降序），说明已是最大排列 → 反转整个数组，结束。</p>
+  <h3>第 ② 步：从右往左找第一个 nums[j] &gt; nums[i]，交换</h3>
+  <p>因为后缀降序，<strong>从右往左第一个大于 nums[i] 的数就是"大于它的最小者"</strong>（比它小的都排在更右边，从右扫到第一个大的，再往左只会更大）。交换后前半部分刚好完成"最小幅度变大"。</p>
+  <h3>第 ③ 步：反转后缀 [i+1, end]</h3>
+  <p>交换不打乱降序性质（换进来的仍是该位置的合适值），反转降序后缀 = 得到升序 = 最小排列。双指针原地反转，O(n) 时间 O(1) 空间。</p>
+</div>
+
+<div class="stage-wrap">
+  <div class="case-row" id="caseRow"></div>
+  <div class="array-row" id="arrayRow"></div>
+  <div class="status-line" id="statusLine"></div>
+  <div class="action-line" id="actionLine">选择一个示例，点击「下一步」逐帧观察</div>
+  <div class="controls">
+    <button id="btnReset">↺ 重置</button>
+    <button id="btnPrev">‹ 上一步</button>
+    <button id="btnNext" class="primary">下一步 ›</button>
+    <button id="btnPlay">▶ 自动播放</button>
+    <div class="progress"><div id="progressBar"></div></div>
+  </div>
+  <div class="log-history" id="logHistory"></div>
+</div>
+
+<h2>四、Python 实现（一次遍历 + 双指针反转）</h2>
+<pre><span class="kw">class</span> <span class="fn">Solution</span>:
+    <span class="kw">def</span> <span class="fn">nextPermutation</span>(self, nums: list[int]) -> <span class="kw">None</span>:
+        <span class="cm">"""原地修改"""</span>
+        <span class="cm"># ① 从右往左找拐点：第一个 nums[i] < nums[i+1]</span>
+        i = len(nums) - <span class="num">2</span>
+        <span class="kw">while</span> i >= <span class="num">0</span> <span class="kw">and</span> nums[i] >= nums[i + <span class="num">1</span>]:
+            i -= <span class="num">1</span>                    <span class="cm"># 停下时：i 是拐点；i < 0 表示整体降序</span>
+
+        <span class="kw">if</span> i >= <span class="num">0</span>:
+            <span class="cm"># ② 从右往左找第一个 > nums[i] 的数，交换</span>
+            j = len(nums) - <span class="num">1</span>
+            <span class="kw">while</span> nums[j] &lt;= nums[i]:
+                j -= <span class="num">1</span>
+            nums[i], nums[j] = nums[j], nums[i]
+
+        <span class="cm"># ③ 反转降序后缀 [i+1, end]；无拐点时 i=-1，即反转整个数组</span>
+        l, r = i + <span class="num">1</span>, len(nums) - <span class="num">1</span>
+        <span class="kw">while</span> l &lt; r:
+            nums[l], nums[r] = nums[r], nums[l]
+            l += <span class="num">1</span>
+            r -= <span class="num">1</span></pre>
+
+<h2>五、逐例追踪</h2>
+<div class="card">
+  <table>
+    <tr><th>输入</th><th>① 拐点 i</th><th>② 交换的 j</th><th>③ 反转后</th></tr>
+    <tr><td class="mono">[1,2,3]</td><td class="mono">i=1（2 &lt; 3）</td><td class="mono">j=2，换后 [1,3,2]</td><td class="mono">后缀只有 1 位，不变 → <span class="good">[1,3,2]</span></td></tr>
+    <tr><td class="mono">[2,3,1]</td><td class="mono">i=0（2 &lt; 3）</td><td class="mono">j=2（1≤2 跳过，3&gt;2），换后 [3,2,1]…</td><td class="mono">反转 [1..2] → <span class="good">[3,1,2]</span></td></tr>
+    <tr><td class="mono">[3,2,1]</td><td class="mono">无（整体降序）</td><td class="mono">不交换</td><td class="mono">整体反转 → <span class="good">[1,2,3]</span></td></tr>
+    <tr><td class="mono">[1,5,8,4,7,6,5,3,1]</td><td class="mono">i=3（4 &lt; 7）</td><td class="mono">j=6（5 是 &gt;4 的最小者），换后 …8,5,7,6,4,3,1</td><td class="mono">反转 [4..8] → <span class="good">[1,5,8,5,1,3,4,6,7]</span></td></tr>
+  </table>
+  <p>注意 [2,3,1]：拐点是 <strong>i=0</strong> 而不是 i=1，因为 3,1 降序、2&lt;3；这正是"先让尽量靠右的位置变大"的含义——后缀最大就往前找。</p>
+</div>
+
+<h2>六、复杂度分析</h2>
+<div class="complexity-row">
+  <div class="card">
+    <span class="tag ok">时间</span>
+    <div class="big">O(n)</div>
+    <p>找拐点 + 找交换位各最多扫一遍，反转最多扫一遍，三次线性扫描。</p>
+  </div>
+  <div class="card">
+    <span class="tag ok">空间</span>
+    <div class="big">O(1)</div>
+    <p>只用了 i、j、l、r 几个下标变量，完全原地修改。</p>
+  </div>
+  <div class="card">
+    <span class="tag mid">与全排列生成的关系</span>
+    <div class="big">1 次调用</div>
+    <p>反复调用本算法（每 O(n) 一次）即可按字典序遍历全排列，无需生成所有排列再排序（O(n·n!)）。</p>
+  </div>
+</div>
+
+<h2>七、常见疑问与拓展</h2>
+<div class="card">
+  <ul>
+    <li><strong>Q：为什么第 ② 步"从右往左第一个大于 nums[i]"就是大于它的最小者？</strong><br>
+      后缀是降序的：从右往左数值递增。扫描途中经过的数都 ≤ nums[i]，遇到的第一个 &gt; nums[i] 的数，比它再往左的任何候选数都小——正好是"大于它的最小者"。有重复元素时取最右边那个相等的即可（代码用 <code>&lt;=</code> 跳过相等值自动做到）。</li>
+    <li><strong>Q：交换后后缀还是降序吗？</strong><br>
+      是。换出去的是 j 位置的数（原 nums[j] &gt; nums[i]），换进来的是 nums[i]（比后缀中 j 左边所有数都小、比 j 右边所有数都大），j 位置的降序关系在交换前后都成立。</li>
+    <li><strong>Q：为什么"下一个排列"不是把某个更靠左的数变大？</strong><br>
+      更靠左变大必然伴随更大规模的重量级重排，字典序增幅更大；拐点右边既然无法内部变大，拐点就是增幅最小的变动点——这是字典序"贪心到最右"的本质。</li>
+    <li><strong>相关题目：</strong>LC 46/47 全排列（回溯）、LC 60 排列序列（直接算第 k 个，不需要逐步生成）、LC 556 下一个更大元素 III（同一算法作用在整数的十进制位上）、LC 1053 交换一次的先前排列（对称的"上一个排列"）。</li>
+  </ul>
+</div>
+
+<p class="footer-note">口诀：右找拐点 → 右找换位 → 反转后缀；找不到拐点就整体反转。</p>
+
+<script>
+(function () {
+  var CASES = {
+    '例1 [1,2,3]': [1, 2, 3],
+    '例2 [2,3,1]': [2, 3, 1],
+    '例3 [3,2,1]': [3, 2, 1],
+    '例4 [1,5,8,4,7,6,5,3,1]': [1, 5, 8, 4, 7, 6, 5, 3, 1],
+    '带重复 [2,3,3,5,4,4,1]': [2, 3, 3, 5, 4, 4, 1]
+  };
+
+  // ===== 预计算步骤 =====
+  function buildSteps(arr) {
+    var a = arr.slice();
+    var steps = [];
+    var marks = {}; // {pivot, target, scan, suffixFrom, swapL, swapR}
+
+    function snap(msg, extra) {
+      var m = {};
+      for (var k in marks) m[k] = marks[k];
+      if (extra) for (var k2 in extra) m[k2] = extra[k2];
+      steps.push({ arr: a.slice(), msg: msg, marks: m });
+    }
+
+    snap('初始数组');
+
+    // ① 找拐点
+    var i = a.length - 2;
+    var pivot = -1;
+    while (i >= 0) {
+      if (a[i] < a[i + 1]) { pivot = i; break; }
+      marks.scan = i;
+      snap('降序中：nums[' + i + ']=' + a[i] + ' ≥ nums[' + (i + 1) + ']=' + a[i + 1] + '，继续左移');
+      i -= 1;
+    }
+    delete marks.scan;
+    if (pivot < 0) {
+      snap('整趟无拐点 → 整体已是最大排列（降序），直接进入整体反转', { suffixFrom: 0 });
+      var l = 0, r = a.length - 1;
+      while (l < r) {
+        var t = a[l]; a[l] = a[r]; a[r] = t;
+        marks.swapL = l; marks.swapR = r;
+        snap('交换 nums[' + l + '] 与 nums[' + r + ']');
+        l += 1; r -= 1;
+      }
+      delete marks.swapL; delete marks.swapR; delete marks.suffixFrom;
+      snap('完成！下一个排列（即最小排列）为 ' + a.join(','));
+      return steps;
+    }
+    marks.pivot = pivot;
+    marks.suffixFrom = pivot + 1;
+    snap('找到拐点 i=' + pivot + '：nums[' + pivot + ']=' + a[pivot] + ' < nums[' + (pivot + 1) + ']=' + a[pivot + 1] + '，后缀 ' + a.slice(pivot + 1).join(',') + ' 已是最大排列');
+
+    // ② 找交换位
+    var j = a.length - 1;
+    while (j > pivot && a[j] <= a[pivot]) {
+      marks.target = j;
+      snap('nums[' + j + ']=' + a[j] + ' ≤ 拐点值 ' + a[pivot] + '，继续左移');
+      j -= 1;
+    }
+    marks.target = j;
+    snap('找到 j=' + j + '：nums[' + j + ']=' + a[j] + ' 是后缀中 > ' + a[pivot] + ' 的最小者（降序保证）');
+
+    var tmp = a[pivot]; a[pivot] = a[j]; a[j] = tmp;
+    marks.swapL = pivot; marks.swapR = j;
+    snap('交换 nums[' + pivot + '] 与 nums[' + j + '] → ' + a.join(','));
+    delete marks.swapL; delete marks.swapR;
+
+    // ③ 反转后缀
+    var l2 = pivot + 1, r2 = a.length - 1;
+    while (l2 < r2) {
+      var t2 = a[l2]; a[l2] = a[r2]; a[r2] = t2;
+      marks.swapL = l2; marks.swapR = r2;
+      snap('反转后缀：交换 nums[' + l2 + '] 与 nums[' + r2 + ']');
+      l2 += 1; r2 -= 1;
+    }
+    delete marks.swapL; delete marks.swapR;
+    snap('完成！下一个排列为 ' + a.join(','), { suffixFrom: pivot + 1 });
+    return steps;
+  }
+
+  var steps = buildSteps(CASES['例4 [1,5,8,4,7,6,5,3,1]']);
+  var cur = 0, timer = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function render() {
+    var s = steps[cur];
+    var row = $('arrayRow');
+    row.innerHTML = '';
+    s.arr.forEach(function (v, idx) {
+      var d = document.createElement('div');
+      d.className = 'cell';
+      d.innerHTML = v + '<span class="idx">' + idx + '</span>';
+      var m = s.marks;
+      if (idx === m.pivot) d.classList.add('pivot');
+      if (idx === m.target) d.classList.add('target');
+      if (idx === m.scan) d.classList.add('scan');
+      if (idx === m.swapL || idx === m.swapR) d.classList.add('swap');
+      else if (m.suffixFrom !== undefined && idx >= m.suffixFrom) d.classList.add('suffix');
+      if (idx === m.pivot && (idx === m.swapL)) {
+        var lab = document.createElement('span');
+        lab.className = 'arrow-label p';
+        lab.textContent = '拐点 i';
+        d.appendChild(lab);
+      }
+      if (idx === m.target && idx === m.swapR && m.swapL === m.pivot) {
+        var lab2 = document.createElement('span');
+        lab2.className = 'arrow-label t';
+        lab2.textContent = '换位 j';
+        d.appendChild(lab2);
+      }
+      row.appendChild(d);
+    });
+    $('statusLine').textContent = '当前：[' + s.arr.join(', ') + ']';
+    $('actionLine').textContent = s.msg;
+    $('progressBar').style.width = (cur / (steps.length - 1) * 100) + '%';
+
+    var lh = $('logHistory');
+    lh.innerHTML = '';
+    for (var i = 0; i <= cur; i++) {
+      var div = document.createElement('div');
+      div.textContent = '第 ' + i + ' 步  ' + steps[i].msg;
+      if (i === cur) div.className = 'hit';
+      lh.appendChild(div);
+    }
+    lh.scrollTop = lh.scrollHeight;
+
+    $('btnNext').disabled = cur >= steps.length - 1;
+    $('btnPrev').disabled = cur <= 0;
+  }
+
+  function stopPlay() {
+    if (timer) { clearInterval(timer); timer = null; $('btnPlay').textContent = '▶ 自动播放'; }
+  }
+
+  function loadCase(name) {
+    stopPlay();
+    steps = buildSteps(CASES[name]);
+    cur = 0;
+    render();
+  }
+
+  // 示例按钮
+  var cr = $('caseRow');
+  Object.keys(CASES).forEach(function (name) {
+    var b = document.createElement('button');
+    b.textContent = name;
+    if (name.indexOf('例4') === 0) b.classList.add('primary');
+    b.onclick = function () {
+      cr.querySelectorAll('button').forEach(function (x) { x.classList.remove('primary'); });
+      b.classList.add('primary');
+      loadCase(name);
+    };
+    cr.appendChild(b);
+  });
+
+  $('btnNext').onclick = function () { stopPlay(); if (cur < steps.length - 1) { cur++; render(); } };
+  $('btnPrev').onclick = function () { stopPlay(); if (cur > 0) { cur--; render(); } };
+  $('btnReset').onclick = function () { stopPlay(); cur = 0; render(); };
+  $('btnPlay').onclick = function () {
+    if (timer) { stopPlay(); return; }
+    if (cur >= steps.length - 1) cur = 0;
+    $('btnPlay').textContent = '⏸ 暂停';
+    timer = setInterval(function () {
+      if (cur >= steps.length - 1) { stopPlay(); return; }
+      cur++; render();
+    }, 1400);
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>

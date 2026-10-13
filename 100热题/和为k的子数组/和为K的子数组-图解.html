@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 560. 和为 K 的子数组 — 前缀和 + 哈希表 图解</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171b2e;
+    --panel2: #1e2440;
+    --text: #e8eaf6;
+    --muted: #9aa3c7;
+    --accent: #4f8cff;
+    --green: #3ddc97;
+    --red: #ff6b81;
+    --yellow: #ffd166;
+    --purple: #b18cff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7; max-width: 1000px; margin: 0 auto; padding: 32px 24px 80px;
+  }
+  h1 { font-size: 1.7em; margin-bottom: 6px; }
+  h1 .lc-tag {
+    background: var(--green); color: #14322a; font-size: .55em;
+    padding: 2px 10px; border-radius: 6px; vertical-align: middle; margin-right: 10px; font-weight: bold;
+  }
+  h2 { margin: 44px 0 14px; font-size: 1.3em; padding-left: 12px; border-left: 4px solid var(--accent); }
+  p, li { color: var(--muted); }
+  strong, em { color: var(--text); }
+  code { font-family: var(--mono); background: var(--panel2); color: var(--green); padding: 1px 6px; border-radius: 4px; font-size: .92em; }
+  .card { background: var(--panel); border-radius: 14px; padding: 20px 24px; margin: 14px 0; border: 1px solid #262c4a; }
+  .key-insight {
+    background: linear-gradient(135deg, rgba(79,140,255,.12), rgba(177,140,255,.10));
+    border: 1px solid rgba(79,140,255,.35); border-radius: 14px;
+    padding: 18px 22px; margin: 16px 0; font-size: 1.05em;
+  }
+  .key-insight b { color: var(--accent); }
+  .formula {
+    font-family: var(--mono); text-align: center; font-size: 1.15em;
+    background: var(--panel2); border-radius: 10px; padding: 12px; margin: 12px 0; color: var(--text);
+  }
+  .formula .hl { color: var(--yellow); }
+  .warn {
+    background: rgba(255,107,129,.08); border: 1px solid rgba(255,107,129,.35);
+    border-radius: 14px; padding: 16px 22px; margin: 16px 0;
+  }
+  .warn b { color: var(--red); }
+
+  /* ===== 动画区 ===== */
+  .stage-wrap { background: var(--panel); border: 1px solid #262c4a; border-radius: 16px; padding: 24px; margin: 18px 0; }
+  .eg-select { text-align: center; margin-bottom: 14px; color: var(--muted); font-size: .9em; }
+  .eg-select select {
+    background: var(--panel2); color: var(--text); border: 1px solid #313a63;
+    border-radius: 8px; padding: 6px 12px; font-family: inherit; margin-left: 8px;
+  }
+  .array-row { display: flex; gap: 8px; justify-content: center; align-items: center; min-height: 80px; padding: 6px 0; }
+  .cell {
+    width: 52px; height: 52px; border-radius: 10px;
+    background: var(--panel2); border: 1px solid #313a63;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 1.15em; font-weight: 600;
+    position: relative; transition: all .45s cubic-bezier(.4,0,.2,1);
+  }
+  .cell .idx { position: absolute; bottom: -20px; font-size: .62em; color: #5b6591; font-weight: 400; }
+  .cell.cur { background: rgba(177,140,255,.22); border-color: var(--purple); color: var(--purple); transform: translateY(-6px); }
+  .cell.in-sub { background: rgba(255,209,102,.22); border-color: var(--yellow); color: var(--yellow); }
+  .cell.dim { opacity: .35; }
+  .prefix-strip {
+    text-align: center; margin-top: 34px; font-family: var(--mono); font-size: 1.05em;
+    min-height: 1.6em;
+  }
+  .prefix-strip .pv { color: var(--accent); font-weight: 700; }
+  .stage-cols { display: flex; gap: 18px; margin-top: 16px; align-items: stretch; flex-wrap: wrap; }
+  .map-panel {
+    flex: 0 0 300px; background: var(--panel2); border: 1px solid #313a63;
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .map-panel h3 { font-size: .85em; color: var(--muted); font-weight: 400; margin-bottom: 8px; }
+  .query-badge {
+    font-family: var(--mono); font-size: .9em; margin-bottom: 10px;
+    border-radius: 8px; padding: 5px 10px; text-align: center;
+    opacity: .25; transition: opacity .3s; background: var(--panel); border: 1px dashed #313a63;
+  }
+  .query-badge.show { opacity: 1; }
+  .query-badge.finding { color: var(--accent); border-color: rgba(79,140,255,.5); }
+  .query-badge.hitb { color: var(--yellow); border-color: rgba(255,209,102,.6); background: rgba(255,209,102,.08); animation: badgePop .4s cubic-bezier(.3,1.6,.5,1); }
+  .query-badge.missb { color: var(--red); border-color: rgba(255,107,129,.6); animation: shake .4s; }
+  .map-table { display: flex; flex-direction: column; gap: 6px; min-height: 60px; }
+  .map-row {
+    display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: .95em;
+    background: var(--panel); border: 1px solid #313a63; border-radius: 8px;
+    padding: 4px 10px; transition: all .4s;
+  }
+  .map-row .key { color: var(--accent); min-width: 32px; text-align: right; }
+  .map-row .arrow { color: #5b6591; }
+  .map-row .bar { height: 8px; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .4s; }
+  .map-row .cnt { color: var(--green); font-weight: 700; min-width: 34px; }
+  .map-row.hit { background: rgba(255,209,102,.16); border-color: var(--yellow); transform: translateX(5px); }
+  .map-row.hit .key, .map-row.hit .cnt, .map-row.hit .arrow { color: var(--yellow); }
+  .map-row.hit .bar { background: var(--yellow); }
+  .map-row.new { animation: rowPop .45s cubic-bezier(.3,1.6,.5,1); border-color: var(--green); }
+  .map-row.new .key, .map-row.new .cnt { color: var(--green); }
+  @keyframes rowPop { from { transform: scale(.75); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes badgePop { from { transform: scale(.85); } to { transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  .map-empty { color: #5b6591; font-size: .85em; font-family: var(--mono); }
+  .status-panel { flex: 1; min-width: 260px; }
+  .status-line { font-family: var(--mono); font-size: 1.05em; min-height: 1.6em; }
+  .action-log { margin-top: 8px; color: var(--muted); font-size: .92em; min-height: 1.5em; font-family: "Microsoft YaHei", sans-serif; }
+  .ans-line { margin-top: 12px; font-size: 1em; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ans-line .num {
+    font-family: var(--mono); color: var(--yellow); font-size: 1.5em; font-weight: 700;
+    display: inline-block;
+  }
+  .ans-line .num.bump { animation: numBump .55s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes numBump { 0% { transform: scale(1); } 40% { transform: scale(1.45); color: #fff; } 100% { transform: scale(1); } }
+  .add-chip {
+    font-family: var(--mono); font-weight: 700; font-size: 1em;
+    background: var(--yellow); color: #333; border-radius: 99px; padding: 2px 12px;
+    animation: chipFly .5s cubic-bezier(.3,1.6,.5,1);
+    box-shadow: 0 0 14px rgba(255,209,102,.5);
+  }
+  .sub-chips { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .sub-chips .sc {
+    font-family: var(--mono); font-size: .85em; color: var(--yellow);
+    background: rgba(255,209,102,.12); border: 1px solid rgba(255,209,102,.4);
+    border-radius: 8px; padding: 2px 8px;
+    animation: chipFly .5s cubic-bezier(.3,1.6,.5,1);
+  }
+  @keyframes chipFly { from { transform: translateY(8px) scale(.6); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+  .hit-eq {
+    font-family: var(--mono); margin-top: 10px; font-size: 1.05em;
+    color: var(--yellow); animation: badgePop .4s;
+  }
+  .hit-eq .op { background: var(--yellow); color: #333; border-radius: 6px; padding: 0 8px; font-weight: 700; }
+  .log-history {
+    margin-top: 14px; max-height: 130px; overflow-y: auto; font-family: var(--mono);
+    font-size: .85em; color: #7c86b3; border-top: 1px dashed #2c3358; padding-top: 10px;
+  }
+  .log-history div { padding: 1px 0; }
+  .log-history .hit { color: var(--yellow); }
+  .controls { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; }
+  .controls button {
+    background: var(--panel2); color: var(--text); border: 1px solid #313a63;
+    border-radius: 10px; padding: 8px 18px; font-size: .95em; cursor: pointer;
+    transition: background .2s; font-family: inherit;
+  }
+  .controls button:hover { background: #2a3258; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .progress { flex: 1; max-width: 300px; height: 6px; border-radius: 99px; background: var(--panel2); overflow: hidden; }
+  .progress > div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--purple)); transition: width .3s; }
+  .speed-ctl { color: var(--muted); font-size: .85em; display: flex; align-items: center; gap: 6px; }
+  .speed-ctl select { background: var(--panel2); color: var(--text); border: 1px solid #313a63; border-radius: 6px; padding: 3px 6px; font-family: inherit; }
+  .complexity-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .complexity-row .card { flex: 1; min-width: 240px; margin: 0; }
+  .complexity-row .card .big { font-family: var(--mono); font-size: 1.5em; color: var(--accent); }
+  .footer-note { margin-top: 40px; font-size: .85em; color: #5b6591; text-align: center; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<h1><span class="lc-tag">LC 560</span>和为 K 的子数组 — 前缀和 + 哈希表 图解</h1>
+<p>题目：给定整数数组 <code>nums</code> 和整数 <code>k</code>，统计并返回该数组中<b>和恰好为 k 的子数组个数</b>（子数组 = 连续、非空）。<br>
+示例：<code>[1,1,1]</code>, k=2 → <code>2</code>；<code>[1,2,3]</code>, k=3 → <code>2</code></p>
+
+<h2>一、为什么滑动窗口在这里失效？</h2>
+<div class="warn">
+  <b>关键前提：</b>滑动窗口要求「窗口扩张时和单调增、收缩时和单调减」，这只在<b>数组元素全为正数</b>时成立。本题没有这个保证——元素可以是 0 和负数，窗口扩大时和可能变小，窗口就失去了「该扩还是该缩」的判断依据。所以滑动窗口（LC 209 的套路）在这里<b>不适用</b>。
+</div>
+
+<h2>二、核心思想：把子数组问题变成「两数之和」</h2>
+<div class="card">
+  <p>定义前缀和 <code>prefix[t] = nums[0] + ... + nums[t-1]</code>（<code>prefix[0] = 0</code>，表示空前缀），那么：</p>
+  <div class="formula">sum(i..j) = <span class="hl">prefix[j+1] − prefix[i]</span></div>
+  <p>「和为 k 的子数组」就是找一个数对 <code>(i, j+1)</code> 满足 <code>prefix[j+1] − prefix[i] = k</code>。移项后——</p>
+  <div class="formula">在<b style="color:var(--yellow)">之前见过的前缀和</b>里，有多少个等于 <span class="hl">prefix[j+1] − k</span> ？</div>
+  <p>这不就是我们刚讨论过的<b>两数之和</b>吗！只不过这次是在「前缀和数组」上找配对：一边遍历一边用哈希表记录<b>每种前缀和出现的次数</b>，走到每个位置查一次 <code>当前前缀和 − k</code>，查到几次就有几个子数组以当前位置结尾、和为 k。</p>
+</div>
+
+<div class="key-insight">
+  💡 <b>为什么记录「次数」而不是「有无」？</b>前缀和数组里可能有重复的值（比如数组里有负数或 0，前缀和会来回波动）。每个等于 <code>prefix − k</code> 的历史前缀，都对应一个<b>不同的起点</b>、一个不同的子数组，所以要计数。另外别忘了初始化 <code>map[0] = 1</code>——它代表「空前缀」，保证「从头开始、正好等于 k」的子数组也能被统计到。
+</div>
+
+<h2>三、动画演示</h2>
+<div class="stage-wrap">
+  <div class="eg-select">
+    选择用例：
+    <select id="egSel">
+      <option value="0">[1,1,1]，k = 2</option>
+      <option value="1">[1,2,3]，k = 3</option>
+      <option value="2">[1,-1,1,-1]，k = 0（含负数）</option>
+    </select>
+  </div>
+
+  <div class="array-row" id="arrayRow"></div>
+  <div class="prefix-strip" id="prefixStrip"></div>
+
+  <div class="stage-cols">
+    <div class="map-panel">
+      <h3>哈希表：前缀和 → 出现次数（按登记顺序）</h3>
+      <div class="query-badge" id="mapBadge"></div>
+      <div class="map-table" id="mapTable"></div>
+    </div>
+    <div class="status-panel">
+      <div class="status-line" id="statusLine"></div>
+      <div class="action-log" id="actionLog"></div>
+      <div class="ans-line">当前答案 ans = <span class="num" id="ansNum">0</span><span id="ansChip"></span></div>
+      <div class="hit-eq" id="hitEq"></div>
+      <div class="sub-chips" id="subChips"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btnPlay" class="primary">▶ 播放</button>
+    <button id="btnPrev">⏮ 上一步</button>
+    <button id="btnNext">下一步 ⏭</button>
+    <button id="btnReset">↺ 重置</button>
+    <div class="progress"><div id="progressBar"></div></div>
+    <div class="speed-ctl">
+      速度
+      <select id="speedSel">
+        <option value="1800">慢</option>
+        <option value="1000" selected>中</option>
+        <option value="450">快</option>
+      </select>
+    </div>
+  </div>
+  <div class="log-history" id="logHistory"></div>
+</div>
+
+<h2>四、流程总结（每一步只做三件事）</h2>
+<div class="card">
+  <ul>
+    <li>① <strong>累加</strong>：<code>prefix += nums[j]</code></li>
+    <li>② <strong>查询</strong>：哈希表里有几个 <code>prefix − k</code> ？有几个就说明有几个以 <code>j</code> 结尾、和为 k 的子数组，<code>ans += 次数</code></li>
+    <li>③ <strong>登记</strong>：<code>map[prefix] += 1</code>，供后面的位置查询</li>
+  </ul>
+  <p style="margin-top:8px">⚠️ 注意顺序：<b>先查询、后登记</b>。如果先把自己登记进去，当 k = 0 时会把「空子数组」也错误地统计进去。</p>
+</div>
+
+<h2>五、复杂度</h2>
+<div class="complexity-row">
+  <div class="card">
+    <div class="big">时间 O(n)</div>
+    <p>一次遍历，每个位置做 O(1) 的哈希查询与更新。对比暴力枚举所有子数组并求和的 O(n²)（前缀和优化）甚至 O(n³)（每个子数组重新求和）。</p>
+  </div>
+  <div class="card">
+    <div class="big">空间 O(n)</div>
+    <p>哈希表最多存 n 个不同的前缀和。</p>
+  </div>
+</div>
+
+<div class="footer-note">LC 560 · 前缀和 + 哈希表 · 姊妹题：LC 974 和可被 K 整除的子数组、LC 1248 统计优美子数组（思路完全同构，把「前缀和」换成「前缀奇数个数」即可）</div>
+
+<script>
+/* ================= 数据与步骤生成 ================= */
+const CASES = [
+  { nums: [1, 1, 1], k: 2 },
+  { nums: [1, 2, 3], k: 3 },
+  { nums: [1, -1, 1, -1], k: 0 },
+];
+
+function buildSteps(nums, k) {
+  const steps = [];
+  let ans = 0, prefix = 0;
+  const map = new Map([[0, 1]]);
+  const prefixAt = new Map([[0, [-1]]]);   // 前缀和值 -> 出现的边界位置（用于高亮子数组）
+
+  const push = (phase, note, j, sub) => {
+    steps.push({
+      phase, note, j: j ?? -1, sub: sub || null,
+      ans, prefix,
+      map: [...map.entries()],   // Map 保持插入顺序，可视化"按时间登记"的过程
+      hitKey: phase === 'query' ? prefix - k : null,
+      newKey: phase === 'update' ? prefix : null,
+      log: [...(steps.length ? steps[steps.length - 1].log : [])],
+    });
+    if (note) steps[steps.length - 1].log.push(note);
+  };
+
+  push('init', `初始化：map = {0: 1}（空前缀），prefix = 0, ans = 0`, -1);
+
+  for (let j = 0; j < nums.length; j++) {
+    prefix += nums[j];
+    push('prefix', `nums[${j}] = ${nums[j]} 累加进来 → prefix = ${prefix}`, j);
+
+    const need = prefix - k;
+    const hit = map.get(need) ?? 0;
+    push('query', `查询：有几个旧前缀等于 prefix − k = ${prefix} − ${k} = ${need} ？→ ${hit} 个`, j);
+    if (hit > 0) {
+      ans += hit;
+      const starts = prefixAt.get(need) ?? [];   // 每个出现过 need 前缀的边界 = 一个子数组起点
+      const hits = starts.map(t => [t + 1, j]);  // [起点, 终点] 列表
+      const t = hits[hits.length - 1][0];
+      push('query', `ans += ${hit} → ans = ${ans}：这 ${hit} 个起点各对应一个以 j 结尾、和为 k 的子数组`, j, hits);
+      steps[steps.length - 1].added = hit;
+      steps[steps.length - 1].subHits = hits;
+    }
+
+    map.set(prefix, (map.get(prefix) ?? 0) + 1);
+    if (!prefixAt.has(prefix)) prefixAt.set(prefix, []);
+    prefixAt.get(prefix).push(j);
+    push('update', `登记：map[${prefix}] += 1，供后面的位置查询`, j);
+  }
+  push('done', `遍历结束，答案 ans = ${ans}`, -1);
+  return steps;
+}
+
+/* ================= 渲染 ================= */
+const arrayRow = document.getElementById('arrayRow');
+const prefixStrip = document.getElementById('prefixStrip');
+const mapTable = document.getElementById('mapTable');
+const statusLine = document.getElementById('statusLine');
+const actionLog = document.getElementById('actionLog');
+const ansNum = document.getElementById('ansNum');
+const ansChip = document.getElementById('ansChip');
+const hitEq = document.getElementById('hitEq');
+const subChips = document.getElementById('subChips');
+const logHistory = document.getElementById('logHistory');
+const progressBar = document.getElementById('progressBar');
+
+let nums = [], steps = [], cells = [], cur = 0, timer = null, curK = 0;
+
+function setup(caseIdx) {
+  const c = CASES[caseIdx];
+  nums = c.nums;
+  curK = c.k;
+  steps = buildSteps(nums, c.k);
+  arrayRow.innerHTML = '';
+  cells = nums.map((v, i) => {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    d.innerHTML = `${v}<span class="idx">${i}</span>`;
+    arrayRow.appendChild(d);
+    return d;
+  });
+  cur = 0;
+  stopPlay();
+  render(0);
+}
+
+function render(k) {
+  const st = steps[k];
+  cells.forEach((c, i) => {
+    c.className = 'cell';
+    if (st.j >= 0 && i === st.j) c.classList.add('cur');
+    else if (st.j >= 0 && i < st.j) {
+      if (st.sub && st.sub.some(([a, b]) => i >= a && i <= b)) c.classList.add('in-sub');
+      else c.classList.add('dim');
+    }
+  });
+
+  const pv = st.prefix === 0 && st.phase === 'init' ? 0 : st.prefix;
+  prefixStrip.innerHTML = st.j >= 0 || st.phase === 'done'
+    ? `当前遍历到下标 ${st.j >= 0 ? st.j : '末尾'}，前缀和 prefix = <span class="pv">${pv}</span>`
+    : `前缀和定义：prefix[t] = nums[0] + … + nums[t−1]，约定 prefix[0] = 0`;
+
+  /* 哈希表可视化：插入顺序的行 + 次数条，命中/登记高亮 */
+  mapTable.innerHTML = st.map.map(kv => {
+    const isHit = st.phase === 'query' && st.hitKey !== null && kv[0] === st.hitKey && kv[1] > 0;
+    const isNew = st.phase === 'update' && st.newKey !== null && kv[0] === st.newKey;
+    const w = 8 + Math.min(kv[1], 4) * 22;
+    return `<div class="map-row ${isHit ? 'hit' : ''} ${isNew ? 'new' : ''}">
+      <span class="key">${kv[0]}</span><span class="arrow">→</span>
+      <span class="bar" style="width:${w}px"></span><span class="cnt">× ${kv[1]}</span></div>`;
+  }).join('') || '<div class="map-empty">（空）</div>';
+
+  /* 查询徽标：query 阶段展示本次在表中找什么、找到几个 */
+  const badge = document.getElementById('mapBadge');
+  if (st.phase === 'query') {
+    const need = st.prefix - curK;
+    const found = st.map.find(kv => kv[0] === need);
+    const cnt = found ? found[1] : 0;
+    badge.className = 'query-badge show ' + (cnt > 0 ? 'hitb' : 'missb');
+    badge.textContent = cnt > 0
+      ? `🔍 找 prefix − k = ${st.prefix} − ${curK} = ${need} → 命中 ×${cnt}！`
+      : `🔍 找 prefix − k = ${st.prefix} − ${curK} = ${need} → 表里没有`;
+  } else if (st.phase === 'update') {
+    badge.className = 'query-badge show finding';
+    badge.textContent = `✍️ 登记本次前缀和 ${st.prefix} 进表`;
+  } else {
+    badge.className = 'query-badge';
+    badge.textContent = '　';
+  }
+
+  statusLine.innerHTML = st.note || '';
+  actionLog.textContent = '';
+  ansNum.textContent = st.ans;
+  ansNum.classList.remove('bump');
+  if (st.added) void ansNum.offsetWidth;      // 重启动画
+  if (st.added) ansNum.classList.add('bump');
+  ansChip.innerHTML = st.added ? `<span class="add-chip">+${st.added}</span>` : '';
+  hitEq.innerHTML = st.added
+    ? `ans <span class="op">+= ${st.added}</span> 以 j=${st.j} 结尾、和为 k 的子数组有 ${st.added} 个 ↓`
+    : '';
+  subChips.innerHTML = st.subHits
+    ? st.subHits.map(([a, b]) =>
+        `<span class="sc">nums[${a}..${b}] = [${nums.slice(a, b + 1).join(',')}] 和 = ${nums.slice(a, b + 1).reduce((x, y) => x + y, 0)}</span>`
+      ).join('')
+    : '';
+  logHistory.innerHTML = st.log.slice(-40).map(l =>
+    l.startsWith('ans +=') ? `<div class="hit">${l}</div>` : `<div>${l}</div>`).join('');
+  logHistory.scrollTop = logHistory.scrollHeight;
+  progressBar.style.width = ((k + 1) / steps.length * 100) + '%';
+}
+
+/* ================= 播放控制 ================= */
+const btnPlay = document.getElementById('btnPlay');
+function stopPlay() { clearInterval(timer); timer = null; btnPlay.textContent = '▶ 播放'; }
+
+btnPlay.onclick = () => {
+  if (timer) { stopPlay(); return; }
+  if (cur >= steps.length - 1) cur = 0;
+  btnPlay.textContent = '⏸ 暂停';
+  timer = setInterval(() => {
+    if (cur < steps.length - 1) { cur++; render(cur); }
+    else stopPlay();
+  }, +document.getElementById('speedSel').value);
+};
+document.getElementById('btnNext').onclick = () => { stopPlay(); if (cur < steps.length - 1) { cur++; render(cur); } };
+document.getElementById('btnPrev').onclick = () => { stopPlay(); if (cur > 0) { cur--; render(cur); } };
+document.getElementById('btnReset').onclick = () => { render(0); cur = 0; };
+document.getElementById('egSel').onchange = e => setup(+e.target.value);
+
+setup(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 76. 最小覆盖子串 — 滑动窗口 图解</title>
+<style>
+  :root {
+    --bg: #0f1220; --panel: #171b2e; --panel2: #1e2440;
+    --text: #e8eaf6; --muted: #9aa3c7;
+    --accent: #4f8cff; --green: #3ddc97; --red: #ff6b81;
+    --yellow: #ffd166; --purple: #b18cff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7; max-width: 1000px; margin: 0 auto; padding: 32px 24px 80px;
+  }
+  h1 { font-size: 1.7em; margin-bottom: 6px; }
+  h1 .lc-tag {
+    background: var(--red); color: #33111a; font-size: .55em;
+    padding: 2px 10px; border-radius: 6px; vertical-align: middle; margin-right: 10px; font-weight: bold;
+  }
+  h2 { margin: 44px 0 14px; font-size: 1.3em; padding-left: 12px; border-left: 4px solid var(--accent); }
+  p, li { color: var(--muted); }
+  strong, em { color: var(--text); }
+  code { font-family: var(--mono); background: var(--panel2); color: var(--green); padding: 1px 6px; border-radius: 4px; font-size: .92em; }
+  .card { background: var(--panel); border-radius: 14px; padding: 20px 24px; margin: 14px 0; border: 1px solid #262c4a; }
+  .key-insight {
+    background: linear-gradient(135deg, rgba(79,140,255,.12), rgba(177,140,255,.10));
+    border: 1px solid rgba(79,140,255,.35); border-radius: 14px;
+    padding: 18px 22px; margin: 16px 0; font-size: 1.05em;
+  }
+  .key-insight b { color: var(--accent); }
+  .warn { background: rgba(255,107,129,.08); border: 1px solid rgba(255,107,129,.35); border-radius: 14px; padding: 16px 22px; margin: 16px 0; }
+  .warn b { color: var(--red); }
+
+  /* ===== 动画区 ===== */
+  .stage-wrap { background: var(--panel); border: 1px solid #262c4a; border-radius: 16px; padding: 24px; margin: 18px 0; }
+  .array-row { display: flex; gap: 6px; justify-content: center; align-items: center; min-height: 96px; padding: 30px 0 24px; flex-wrap: wrap; }
+  .cell {
+    width: 44px; height: 52px; border-radius: 10px;
+    background: var(--panel2); border: 1px solid #313a63;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 1.1em; font-weight: 600;
+    position: relative; transition: all .45s cubic-bezier(.4,0,.2,1);
+  }
+  .cell .idx { position: absolute; bottom: -20px; font-size: .62em; color: #5b6591; font-weight: 400; }
+  .cell.win { background: rgba(79,140,255,.18); border-color: rgba(79,140,255,.55); color: var(--text); }
+  .cell.dim { opacity: .3; }
+  .cell.lpt { border-color: var(--green); box-shadow: 0 0 10px rgba(61,220,151,.35); }
+  .cell.rpt { border-color: var(--purple); box-shadow: 0 0 10px rgba(177,140,255,.35); }
+  .cell.lpt::before { content: 'L'; position: absolute; top: -24px; left: 8px; color: var(--green); font-size: .75em; font-weight: 700; }
+  .cell.rpt::before { content: 'R'; position: absolute; top: -24px; right: 8px; color: var(--purple); font-size: .75em; font-weight: 700; }
+  .cell.flash { background: rgba(255,209,102,.28); border-color: var(--yellow); color: var(--yellow); animation: cellFlash .6s; }
+  @keyframes cellFlash { 0% { transform: translateY(-6px); } 50% { transform: translateY(0); } 75% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+
+  .stage-cols { display: flex; gap: 18px; margin-top: 14px; align-items: stretch; flex-wrap: wrap; }
+  .cov-panel {
+    flex: 0 0 320px; background: var(--panel2); border: 1px solid #313a63;
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .cov-panel h3 { font-size: .85em; color: var(--muted); font-weight: 400; margin-bottom: 8px; }
+  .cov-row { display: flex; align-items: center; gap: 8px; font-family: var(--mono); padding: 4px 0; }
+  .cov-row .ch { color: var(--text); font-weight: 700; width: 18px; }
+  .cov-row .bar-track { flex: 1; height: 10px; background: var(--panel); border-radius: 99px; overflow: hidden; }
+  .cov-row .bar { height: 100%; width: 0; background: var(--red); transition: width .4s; border-radius: 99px; }
+  .cov-row.ok .bar { background: var(--green); }
+  .cov-row .frac { color: var(--muted); font-size: .82em; min-width: 46px; text-align: right; }
+  .cov-row .mark { width: 18px; text-align: center; color: var(--red); }
+  .cov-row.ok .mark { color: var(--green); }
+  .formed-line {
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed #2c3358;
+    font-family: var(--mono); font-size: .95em; text-align: center;
+  }
+  .formed-line .val { color: var(--yellow); font-weight: 700; }
+  .formed-line .done { color: var(--green); }
+  .status-panel { flex: 1; min-width: 280px; }
+  .status-line { font-family: var(--mono); font-size: 1em; min-height: 1.7em; }
+  .best-box {
+    margin-top: 12px; font-family: var(--mono); font-size: 1.05em;
+    background: rgba(255,209,102,.08); border: 1px solid rgba(255,209,102,.45);
+    border-radius: 10px; padding: 8px 14px; color: var(--yellow);
+    transition: all .4s;
+  }
+  .best-box.none { color: #5b6591; background: var(--panel2); border-color: #313a63; }
+  .log-history {
+    margin-top: 16px; max-height: 130px; overflow-y: auto; font-family: var(--mono);
+    font-size: .85em; color: #7c86b3; border-top: 1px dashed #2c3358; padding-top: 10px;
+  }
+  .log-history div { padding: 1px 0; }
+  .log-history .rec { color: var(--yellow); }
+  .controls { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; }
+  .controls button {
+    background: var(--panel2); color: var(--text); border: 1px solid #313a63;
+    border-radius: 10px; padding: 8px 18px; font-size: .95em; cursor: pointer;
+    transition: background .2s; font-family: inherit;
+  }
+  .controls button:hover { background: #2a3258; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .progress { flex: 1; max-width: 300px; height: 6px; border-radius: 99px; background: var(--panel2); overflow: hidden; }
+  .progress > div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--purple)); transition: width .3s; }
+  .speed-ctl { color: var(--muted); font-size: .85em; display: flex; align-items: center; gap: 6px; }
+  .speed-ctl select { background: var(--panel2); color: var(--text); border: 1px solid #313a63; border-radius: 6px; padding: 3px 6px; font-family: inherit; }
+  .complexity-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .complexity-row .card { flex: 1; min-width: 240px; margin: 0; }
+  .complexity-row .card .big { font-family: var(--mono); font-size: 1.5em; color: var(--accent); }
+  .footer-note { margin-top: 40px; font-size: .85em; color: #5b6591; text-align: center; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .pseudo { font-family: var(--mono); font-size: .92em; background: var(--panel2); border-radius: 10px; padding: 14px 18px; margin: 10px 0; color: var(--muted); }
+  .pseudo .k { color: var(--purple); }
+  .pseudo .c { color: #5b6591; }
+  .pseudo .hl { color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<h1><span class="lc-tag">LC 76</span>最小覆盖子串 — 滑动窗口 图解</h1>
+<p>题目：给定 <code>s</code> 和 <code>t</code>，返回 s 中<b>覆盖 t 全部字符（含重复）</b>的最短窗口子串。<br>
+示例：<code>s = "ADOBECODEBANC"</code>, <code>t = "ABC"</code> → <code>"BANC"</code></p>
+
+<h2>一、为什么这题可以放心用滑动窗口？</h2>
+<div class="card">
+  <p>还记得「和为 K 的子数组」为什么不能用滑动窗口吗？——因为负数会破坏单调性。而本题的"覆盖"性质是<b>单调的</b>：</p>
+  <ul>
+    <li><strong>R 右移（扩张）</strong>：窗口变大只会"更容易覆盖"，覆盖状态不会从 ✓ 退回 ✗；</li>
+    <li><strong>L 右移（收缩）</strong>：窗口变小只会"更难覆盖"。</li>
+  </ul>
+  <p>于是有了关键套路：<b>R 负责找可行，L 负责压最短</b>——R 每走一步，只要当前窗口覆盖了 t，就让 L 一路收缩到"刚好不覆盖"为止，收缩途中每一格都是候选答案。每个字符最多进出窗口各一次，总体 O(m+n)。</p>
+</div>
+
+<div class="key-insight">
+  💡 <b>如何 O(1) 判断"窗口是否覆盖 t"？</b>不开口比较逐个字符：用 <code>need</code> 记录 t 的字符需求，<code>window</code> 记录窗口内计数，再加一个整数 <code>formed</code>（已凑齐的种类数）。<b>某字符数量恰好达到需求时 formed+1，跌破需求时 formed−1</b>，"覆盖" ⟺ <code>formed == required</code>，一次整数比较搞定。
+</div>
+
+<h2>二、动画演示</h2>
+<div class="stage-wrap">
+  <p style="text-align:center; color:var(--muted); font-size:.9em; margin-bottom:2px;">
+    s = <code>"ADOBECODEBANC"</code>，t = <code>"ABC"</code> &nbsp;&nbsp;
+    <span style="color:var(--green)">■ L（收缩端）</span>&nbsp;&nbsp;
+    <span style="color:var(--purple)">■ R（扩张端）</span>&nbsp;&nbsp;
+    <span style="color:var(--accent)">■ 窗口内</span>&nbsp;&nbsp;
+    <span style="color:var(--yellow)">■ 候选答案</span>
+  </p>
+
+  <div class="array-row" id="arrayRow"></div>
+
+  <div class="stage-cols">
+    <div class="cov-panel">
+      <h3>t 字符达标进度（窗口内数量 / 需求数量）</h3>
+      <div id="covRows"></div>
+      <div class="formed-line">覆盖进度 formed = <span class="val" id="formedVal">0</span> / <span id="reqVal">3</span> <span id="covFlag"></span></div>
+    </div>
+    <div class="status-panel">
+      <div class="status-line" id="statusLine">点击「▶ 播放」开始动画</div>
+      <div class="best-box none" id="bestBox">候选答案：暂无</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btnPlay" class="primary">▶ 播放</button>
+    <button id="btnPrev">⏮ 上一步</button>
+    <button id="btnNext">下一步 ⏭</button>
+    <button id="btnReset">↺ 重置</button>
+    <div class="progress"><div id="progressBar"></div></div>
+    <div class="speed-ctl">
+      速度
+      <select id="speedSel">
+        <option value="1800">慢</option>
+        <option value="1000" selected>中</option>
+        <option value="450">快</option>
+      </select>
+    </div>
+  </div>
+  <div class="log-history" id="logHistory"></div>
+</div>
+
+<h2>三、算法骨架（就四行主逻辑）</h2>
+<div class="pseudo">
+  <span class="k">for</span> r <span class="k">in</span> range(m):<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;加入 s[r]，若某字符<span class="hl">恰好凑齐</span> → formed += 1<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">while</span> formed == required:<span style="color:var(--muted)">   # 覆盖了！</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">先记录答案</span>（当前窗口更短才记录）<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;移出 s[l]，若某字符<span class="hl">跌破需求</span> → formed -= 1；l += 1
+</div>
+<div class="warn">
+  <b>三个最容易写错的点：</b><br>
+  ① <b>t 有重复字符</b>：<code>need</code> 存的是数量不是有无（<code>t="aa"</code> 要求窗口里有两个 'a'，这正是示例 3 返回 "" 的原因）；<br>
+  ② <b>formed 只在"恰好达到"和"刚好跌破"时变动</b>：'A' 窗口里有 3 个也只算凑齐 1 次，多出来的不重复计数；<br>
+  ③ <b>先记录答案、再收缩</b>：while 循环内第一个动作必须是记录当前窗口，否则会漏掉最短的那一个。
+</div>
+
+<h2>四、复杂度</h2>
+<div class="complexity-row">
+  <div class="card">
+    <div class="big">时间 O(m + n)</div>
+    <p>L 和 R 都只单向前进，每个字符最多进出窗口各一次；每步的覆盖判断是 O(1)（formed == required）。</p>
+  </div>
+  <div class="card">
+    <div class="big">空间 O(C)</div>
+    <p>C 为字符集大小，两个计数表最多存 C 种字符（ASCII 下是 O(128) = O(1)）。</p>
+  </div>
+</div>
+
+<div class="footer-note">LC 76 · 滑动窗口 + 字符计数 · 姊妹题：LC 438 找到字符串中所有字母异位词、LC 567 字符串的排列（同一套 need/window/formed 模板）</div>
+
+<script>
+/* ================= 步骤生成 ================= */
+const S = "ADOBECODEBANC", T = "ABC";
+
+function buildSteps(s, t) {
+  const steps = [];
+  const need = new Map();
+  for (const ch of t) need.set(ch, (need.get(ch) ?? 0) + 1);
+  const chars = [...need.keys()];           // t 的去重字符，按出现顺序
+  const required = need.size;
+  const window = {};
+  let formed = 0, l = 0, bestLen = Infinity, bestRange = null;
+
+  const push = (phase, note, L, R, flash) => {
+    steps.push({
+      phase, note, l: L ?? -1, r: R ?? -1, flash: !!flash,
+      formed, win: { ...window }, bestLen,
+      best: bestRange ? [...bestRange] : null,
+      log: [...(steps.length ? steps[steps.length - 1].log : [])],
+    });
+    if (note) steps[steps.length - 1].log.push(note);
+  };
+
+  push('init', `初始化：need = {${[...need].map(([c, v]) => `${c}:${v}`).join(', ')}}，formed = 0，L = R = 0`, -1, -1);
+
+  for (let r = 0; r < s.length; r++) {
+    const ch = s[r];
+    window[ch] = (window[ch] ?? 0) + 1;
+    let extra = '';
+    if (need.has(ch)) {
+      if (window[ch] === need.get(ch)) { formed++; extra = `'${ch}' 恰好凑齐 → formed = ${formed}`; }
+      else if (window[ch] > need.get(ch)) extra = `'${ch}' 已足够（多出的忽略）`;
+      else extra = `'${ch}' 还差 ${need.get(ch) - window[ch]} 个`;
+    } else extra = `'${ch}' 不在 t 中，只入窗不计数`;
+
+    push('expand', `R → ${r}：加入 '${ch}'，${extra}`, l, r);
+
+    while (formed === required) {
+      const curLen = r - l + 1;
+      if (curLen < bestLen) {
+        bestLen = curLen; bestRange = [l, r];
+        push('record', `窗口 "${s.slice(l, r + 1)}"（长度 ${curLen}）覆盖 t 且更短 → 记为候选答案`, l, r, true);
+      }
+      const out = s[l];
+      window[out]--;
+      let msg;
+      if (need.has(out) && window[out] < need.get(out)) { formed--; msg = `移出 '${out}' 后跌破需求 → formed = ${formed}，不再覆盖，收缩结束`; }
+      else msg = `移出 '${out}' 后窗口仍覆盖（它是多余的），继续收缩`;
+      l++;
+      push('shrink', `L → ${l}：${msg}`, l, r);
+    }
+  }
+
+  push('done', bestRange
+    ? `遍历结束：最短覆盖子串 = "${s.slice(bestRange[0], bestRange[1] + 1)}"（长度 ${bestLen}）`
+    : `遍历结束：不存在覆盖 t 的窗口，返回 ""`, -1, -1);
+  return { steps, chars, need, required };
+}
+
+/* ================= 渲染 ================= */
+const arrayRow = document.getElementById('arrayRow');
+const covRows = document.getElementById('covRows');
+const formedVal = document.getElementById('formedVal');
+const reqVal = document.getElementById('reqVal');
+const covFlag = document.getElementById('covFlag');
+const statusLine = document.getElementById('statusLine');
+const bestBox = document.getElementById('bestBox');
+const logHistory = document.getElementById('logHistory');
+const progressBar = document.getElementById('progressBar');
+
+const { steps, chars, need, required } = buildSteps(S, T);
+reqVal.textContent = required;
+
+const cells = [...S].map((ch, i) => {
+  const d = document.createElement('div');
+  d.className = 'cell';
+  d.innerHTML = `${ch}<span class="idx">${i}</span>`;
+  arrayRow.appendChild(d);
+  return d;
+});
+
+function render(k) {
+  const st = steps[k];
+  cells.forEach((c, i) => {
+    c.className = 'cell';
+    if (st.l >= 0 && i >= st.l && i <= st.r) {
+      c.classList.add('win');
+      if (i === st.l) c.classList.add('lpt');
+      if (i === st.r) c.classList.add('rpt');
+      if (st.flash) c.classList.add('flash');
+    } else if (st.phase === 'done' && st.best && i >= st.best[0] && i <= st.best[1]) {
+      c.classList.add('flash');
+    } else c.classList.add('dim');
+  });
+
+  covRows.innerHTML = chars.map(ch => {
+    const have = st.win[ch] ?? 0, nd = need.get(ch);
+    const ok = have >= nd;
+    const w = Math.min(have / nd, 1) * 100;
+    return `<div class="cov-row ${ok ? 'ok' : ''}">
+      <span class="ch">${ch}</span>
+      <span class="bar-track"><span class="bar" style="width:${w}%"></span></span>
+      <span class="frac">${have}/${nd}</span>
+      <span class="mark">${ok ? '✓' : '✗'}</span></div>`;
+  }).join('');
+
+  formedVal.textContent = st.formed;
+  formedVal.className = st.formed >= required ? 'val done' : 'val';
+  covFlag.innerHTML = st.formed >= required ? '<span style="color:var(--green)">✓ 已覆盖，开始收缩</span>' : '<span style="color:#5b6591">未覆盖，R 继续</span>';
+
+  statusLine.innerHTML = st.note || '';
+  if (st.best) {
+    const sub = S.slice(st.best[0], st.best[1] + 1);
+    bestBox.className = 'best-box';
+    bestBox.innerHTML = `候选答案："<b>${sub}</b>"（长度 ${st.bestLen}）`;
+  } else { bestBox.className = 'best-box none'; bestBox.textContent = '候选答案：暂无'; }
+
+  logHistory.innerHTML = st.log.slice(-40).map(l =>
+    l.startsWith('窗口') ? `<div class="rec">${l}</div>` : `<div>${l}</div>`).join('');
+  logHistory.scrollTop = logHistory.scrollHeight;
+  progressBar.style.width = ((k + 1) / steps.length * 100) + '%';
+}
+
+/* ================= 播放控制 ================= */
+let cur = 0, timer = null;
+const btnPlay = document.getElementById('btnPlay');
+function stopPlay() { clearInterval(timer); timer = null; btnPlay.textContent = '▶ 播放'; }
+
+btnPlay.onclick = () => {
+  if (timer) { stopPlay(); return; }
+  if (cur >= steps.length - 1) cur = 0;
+  btnPlay.textContent = '⏸ 暂停';
+  timer = setInterval(() => {
+    if (cur < steps.length - 1) { cur++; render(cur); }
+    else stopPlay();
+  }, +document.getElementById('speedSel').value);
+};
+document.getElementById('btnNext').onclick = () => { stopPlay(); if (cur < steps.length - 1) { cur++; render(cur); } };
+document.getElementById('btnPrev').onclick = () => { stopPlay(); if (cur > 0) { cur--; render(cur); } };
+document.getElementById('btnReset').onclick = () => { stopPlay(); cur = 0; render(0); };
+
+render(0);
+</script>
+</body>
+</html>

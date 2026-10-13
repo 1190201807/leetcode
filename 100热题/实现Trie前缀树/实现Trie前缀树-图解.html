@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 208. 实现 Trie (前缀树) — 图解</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171b2e;
+    --panel2: #1e2440;
+    --text: #e8eaf6;
+    --muted: #9aa3c7;
+    --accent: #4f8cff;
+    --green: #3ddc97;
+    --red: #ff6b81;
+    --yellow: #ffd166;
+    --purple: #b18cff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  h1 { font-size: 1.7em; margin-bottom: 6px; }
+  h1 .lc-tag {
+    background: var(--yellow); color: #333; font-size: .55em;
+    padding: 2px 10px; border-radius: 6px; vertical-align: middle; margin-right: 10px;
+    font-weight: bold;
+  }
+  h2 {
+    margin: 44px 0 14px; font-size: 1.3em;
+    padding-left: 12px; border-left: 4px solid var(--accent);
+  }
+  h3 { margin: 20px 0 8px; font-size: 1.05em; color: var(--text); }
+  p, li { color: var(--muted); }
+  strong, em { color: var(--text); }
+  code {
+    font-family: var(--mono);
+    background: var(--panel2); color: var(--green);
+    padding: 1px 6px; border-radius: 4px; font-size: .92em;
+  }
+  pre {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 14px; padding: 18px 22px; margin: 14px 0;
+    font-family: var(--mono); font-size: .9em; line-height: 1.65;
+    overflow-x: auto; color: #c6cdf0;
+  }
+  pre .kw { color: var(--purple); }
+  pre .fn { color: var(--accent); }
+  pre .num { color: var(--yellow); }
+  pre .cm { color: #6b7499; }
+  .card {
+    background: var(--panel); border-radius: 14px;
+    padding: 20px 24px; margin: 14px 0;
+    border: 1px solid #262c4a;
+  }
+  .complexity-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .complexity-row .card { flex: 1; min-width: 240px; margin: 0; position: relative; overflow: hidden; }
+  .complexity-row .card .big {
+    font-family: var(--mono); font-size: 1.5em; color: var(--accent);
+  }
+  .complexity-row .card .tag {
+    position: absolute; top: 12px; right: 14px; font-size: .8em;
+    padding: 1px 8px; border-radius: 99px;
+  }
+  .tag.ok { background: rgba(61,220,151,.15); color: var(--green); }
+  .tag.mid { background: rgba(255,209,102,.15); color: var(--yellow); }
+  .key-insight {
+    background: linear-gradient(135deg, rgba(79,140,255,.12), rgba(177,140,255,.10));
+    border: 1px solid rgba(79,140,255,.35);
+    border-radius: 14px; padding: 18px 22px; margin: 16px 0;
+    font-size: 1.05em;
+  }
+  .key-insight b { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: .95em; }
+  th, td {
+    border: 1px solid #2c3358; padding: 8px 14px;
+    text-align: left; color: var(--muted);
+  }
+  th { background: var(--panel2); color: var(--text); }
+  .mono { font-family: var(--mono); }
+  td .good { color: var(--green); }
+  td .bad { color: var(--red); }
+
+  /* ===== 动画区 ===== */
+  .stage-wrap {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 16px; padding: 24px; margin: 18px 0;
+    overflow-x: auto;
+  }
+  /* 树形布局（org-chart 风格） */
+  .tree ul {
+    display: flex; justify-content: center;
+    padding-top: 20px; position: relative;
+    list-style: none;
+  }
+  .tree li {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px 10px 0; position: relative;
+  }
+  .tree li::before, .tree li::after {
+    content: ''; position: absolute; top: 0; right: 50%;
+    border-top: 1px solid #313a63; width: 50%; height: 20px;
+  }
+  .tree li::after {
+    right: auto; left: 50%; border-left: 1px solid #313a63;
+  }
+  .tree li:only-child::before, .tree li:only-child::after { display: none; }
+  .tree li:only-child { padding-top: 0; }
+  .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+  .tree li:last-child::before {
+    border-right: 1px solid #313a63; border-radius: 0 6px 0 0;
+  }
+  .tree li:first-child::after { border-radius: 6px 0 0 0; }
+  .tree ul ul::before {
+    content: ''; position: absolute; top: 0; left: 50%;
+    border-left: 1px solid #313a63; width: 0; height: 20px;
+  }
+  .tree > ul { padding-top: 0; }
+  .tree > ul > li { padding-top: 0; }
+  .tree > ul > li::before, .tree > ul > li::after { display: none; }
+
+  .tnode {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--panel2); border: 1px solid #313a63;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 1.05em; font-weight: 700;
+    position: relative; transition: all .4s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0;
+  }
+  .tnode.root { color: var(--muted); font-size: .8em; }
+  .tnode .endmark {
+    position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
+    font-size: .55em; background: var(--green); color: #0f1220;
+    padding: 0 6px; border-radius: 99px; font-weight: 700; white-space: nowrap;
+  }
+  .tnode.isend { border-color: var(--green); box-shadow: 0 0 10px rgba(61,220,151,.35); }
+  .tnode.hit { background: rgba(79,140,255,.25); border-color: var(--accent); color: var(--accent); }
+  .tnode.new { background: rgba(255,209,102,.28); border-color: var(--yellow); color: var(--yellow); animation: pop .5s cubic-bezier(.34,1.56,.64,1); }
+  .tnode.fail { background: rgba(255,107,129,.25); border-color: var(--red); color: var(--red); }
+  .tnode.notend { background: rgba(255,209,102,.20); border-color: var(--yellow); color: var(--yellow); }
+  @keyframes pop {
+    0%   { transform: scale(.3); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .result-badge {
+    text-align: center; margin: 20px 0 4px;
+    font-family: var(--mono); font-size: 1.15em; min-height: 1.6em;
+  }
+  .result-badge .val-true { color: var(--green); font-weight: 700; }
+  .result-badge .val-false { color: var(--red); font-weight: 700; }
+  .action-line {
+    text-align: center; margin-top: 8px; color: var(--muted);
+    font-size: .95em; min-height: 1.6em;
+  }
+  .controls {
+    display: flex; justify-content: center; align-items: center; gap: 12px;
+    margin-top: 20px; flex-wrap: wrap;
+  }
+  .controls button {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid #313a63; border-radius: 10px;
+    padding: 8px 18px; font-size: .95em; cursor: pointer;
+    transition: background .2s; font-family: inherit;
+  }
+  .controls button:hover { background: #2a3258; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .manual-row {
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    margin-top: 14px; flex-wrap: wrap;
+  }
+  .manual-row input {
+    background: var(--panel2); border: 1px solid #313a63; border-radius: 10px;
+    color: var(--text); padding: 8px 14px; font-family: var(--mono);
+    font-size: .95em; width: 180px; outline: none;
+  }
+  .manual-row input:focus { border-color: var(--accent); }
+  .log-history {
+    margin-top: 18px; max-height: 160px; overflow-y: auto;
+    font-family: var(--mono); font-size: .85em; color: #7c86b3;
+    border-top: 1px dashed #2c3358; padding-top: 10px;
+  }
+  .log-history div { padding: 1px 0; }
+  .log-history .ok { color: var(--green); }
+  .log-history .no { color: var(--red); }
+  .log-history .latest { color: var(--yellow); }
+  .footer-note { text-align: center; color: #5b6591; font-size: .85em; margin-top: 50px; }
+</style>
+</head>
+<body>
+
+<h1><span class="lc-tag">LeetCode 208 中等</span>实现 Trie (前缀树) — 图解</h1>
+<p>前缀树（Trie，读作 "try"）：高效存储和检索字符串键集的树形结构，自动补全、拼写检查的底层模型。</p>
+
+<h2>一、题目回顾</h2>
+<div class="card">
+  <p>实现 <code>Trie</code> 类的三个方法：</p>
+  <ul>
+    <li><code>insert(word)</code>：插入字符串 word</li>
+    <li><code>search(word)</code>：word 是否<strong>之前被完整插入过</strong>（"app" 插入过 ≠ "apple" 能 search 成功）</li>
+    <li><code>startsWith(prefix)</code>：是否有插入过的字符串以 prefix <strong>开头</strong>（"apple" 插入过 ⇒ startsWith("app") 为 true）</li>
+  </ul>
+  <p><strong>search 与 startsWith 的唯一区别：</strong>走到 prefix 的最后一个节点后，search 还要求「有单词恰好在这里结束」，startsWith 则不要求。</p>
+</div>
+
+<h2>二、为什么不用哈希表？</h2>
+<table>
+  <tr><th>操作</th><th>哈希表 set</th><th>Trie</th></tr>
+  <tr>
+    <td><code>search(word)</code></td>
+    <td class="mono good">O(1)</td>
+    <td class="mono good">O(L)</td>
+    <td>哈希表略快，但 Trie 支持更多</td>
+  </tr>
+  <tr>
+    <td><code>startsWith(prefix)</code></td>
+    <td class="mono bad">O(n·L)：只能遍历全部字符串逐个比对</td>
+    <td class="mono good">O(L)：沿树走 prefix 长度步即可</td>
+    <td>这是本题选 Trie 的根本原因</td>
+  </tr>
+  <tr>
+    <td>空间（大量共享前缀，如 app / apple / apply）</td>
+    <td>每个字符串完整存储</td>
+    <td>公共前缀只存一份，还能做前缀统计</td>
+  </tr>
+</table>
+
+<div class="key-insight">
+  <b>核心洞察：</b>把每个字符串拆成<strong>一条字符路径</strong>，从根出发一个字符走一步；公共前缀自然汇合成公共路径。
+  于是「有没有这个前缀」变成「这条路径存不存在」，查询成本只与 <b>prefix 的长度</b>有关，与存了多少个单词无关。
+</div>
+
+<h2>三、节点设计：一个字典 + 一个布尔</h2>
+<div class="card">
+  <p>Trie 的每个节点只需要两个成员：</p>
+  <ul>
+    <li><code>children</code>：字典 <code>{字符 → 子节点}</code>，表示"从这个节点出发，可以沿哪些字符继续往下走"（用字典而不是 26 长度数组，省空间且不限字符集）</li>
+    <li><code>is_end</code>：布尔值，标记"是否有单词恰好在此节点结束"——它就是 <code>search</code> 和 <code>startsWith</code> 分道扬镳的地方</li>
+  </ul>
+  <p>插入 <code>apple</code> 和 <code>app</code> 后的树（绿色描边 = is_end，下方标"词尾"）：</p>
+</div>
+
+<div class="stage-wrap">
+  <div class="tree" id="treeRoot"></div>
+  <div class="result-badge" id="resultBadge">插入 apple / app 后的 Trie（点击下方按钮操作）</div>
+  <div class="action-line" id="actionLine">起点是根节点，根节点本身不代表任何字符</div>
+  <div class="controls">
+    <button id="btnReset">↺ 重置为空树</button>
+    <button id="btnPrev">‹ 上一步</button>
+    <button id="btnDemo" class="primary">▶ 播放示例流程</button>
+    <button id="btnNext">单步 ›</button>
+  </div>
+  <div class="manual-row">
+    <input id="inputWord" placeholder="输入小写单词，如 apple" maxlength="12">
+    <button id="btnInsert">insert</button>
+    <button id="btnSearch">search</button>
+    <button id="btnStartsWith">startsWith</button>
+  </div>
+  <div class="log-history" id="logHistory"></div>
+</div>
+
+<h2>四、三个操作怎么走</h2>
+<div class="card">
+  <h3>insert(word) —— 逐字符铺设路径</h3>
+  <ul>
+    <li>从根出发，对 word 的每个字符：若下一跳不存在就<strong>新建节点</strong>，然后移过去</li>
+    <li>走完所有字符后，把当前节点的 <code>is_end = True</code></li>
+  </ul>
+  <h3>search(word) —— 走路径 + 验收</h3>
+  <ul>
+    <li>从根出发逐字符下走；任一步<strong>走不通</strong> → <code>False</code></li>
+    <li>走通了，还要看终点节点 <code>is_end</code> 是否为 True（路径存在 ≠ 有单词在这里结束）</li>
+  </ul>
+  <h3>startsWith(prefix) —— 只走路径，不验收</h3>
+  <ul>
+    <li>和 search 前半段完全一样：逐字符下走，走不通 → <code>False</code></li>
+    <li>走通了直接返回 <code>True</code>，<strong>不看 is_end</strong></li>
+  </ul>
+  <p>观察 search / startsWith 的共同点后可以发现：三者共享同一个「沿字符串下走」的辅助函数，返回<strong>走到的节点（或 None）</strong>，再各自补充验收逻辑。</p>
+</div>
+
+<h2>五、Python 实现</h2>
+<pre><span class="kw">class</span> <span class="fn">Trie</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.children = {}   <span class="cm"># 字符 → 子 Trie 节点</span>
+        self.is_end = <span class="kw">False</span>  <span class="cm"># 是否有单词在此节点结束</span>
+
+    <span class="kw">def</span> <span class="fn">insert</span>(self, word: str) -> <span class="kw">None</span>:
+        cur = self                      <span class="cm"># 从根出发</span>
+        <span class="kw">for</span> ch <span class="kw">in</span> word:
+            <span class="kw">if</span> ch <span class="kw">not in</span> cur.children:  <span class="cm"># 路径断了就现铺</span>
+                cur.children[ch] = Trie()
+            cur = cur.children[ch]
+        cur.is_end = <span class="kw">True</span>               <span class="cm"># 单词在这里结束</span>
+
+    <span class="kw">def</span> <span class="fn">_find</span>(self, s: str) -> <span class="str">"Trie | None"</span>:
+        <span class="cm"># 三个方法共用的下走函数：能走完返回终点节点，否则 None</span>
+        cur = self
+        <span class="kw">for</span> ch <span class="kw">in</span> s:
+            <span class="kw">if</span> ch <span class="kw">not in</span> cur.children:
+                <span class="kw">return</span> <span class="kw">None</span>
+            cur = cur.children[ch]
+        <span class="kw">return</span> cur
+
+    <span class="kw">def</span> <span class="fn">search</span>(self, word: str) -> <span class="kw">bool</span>:
+        node = self._find(word)
+        <span class="kw">return</span> node <span class="kw">is not</span> <span class="kw">None</span> <span class="kw">and</span> node.is_end   <span class="cm"># 走得到 + 是词尾</span>
+
+    <span class="kw">def</span> <span class="fn">startsWith</span>(self, prefix: str) -> <span class="kw">bool</span>:
+        <span class="kw">return</span> self._find(prefix) <span class="kw">is not</span> <span class="kw">None</span>      <span class="cm"># 只要求走得到</span></pre>
+
+<h2>六、逐操作追踪示例</h2>
+<div class="card">
+  <p>示例输入：<span class="mono">insert("apple") → search("apple") → search("app") → startsWith("app") → insert("app") → search("app")</span></p>
+  <table>
+    <tr><th>操作</th><th>树的反应</th><th>结果</th></tr>
+    <tr><td class="mono">insert("apple")</td><td>新铺 a-p-p-l-e 五个节点，e 标记 is_end</td><td class="mono">—</td></tr>
+    <tr><td class="mono">search("apple")</td><td>沿 a→p→p→l→e 走通，e 的 is_end 为真</td><td class="mono good">true</td></tr>
+    <tr><td class="mono">search("app")</td><td>沿 a→p→p 走通，但该节点 is_end 为假（只是路过）</td><td class="mono bad">false</td></tr>
+    <tr><td class="mono">startsWith("app")</td><td>沿 a→p→p 走通即返回，不检查 is_end</td><td class="mono good">true</td></tr>
+    <tr><td class="mono">insert("app")</td><td>a→p→p 已存在（前缀复用！），只把第二个 p 的 is_end 改为真</td><td class="mono">—</td></tr>
+    <tr><td class="mono">search("app")</td><td>走通且此时 is_end 已为真</td><td class="mono good">true</td></tr>
+  </table>
+</div>
+
+<h2>七、复杂度分析</h2>
+<div class="complexity-row">
+  <div class="card">
+    <span class="tag ok">insert</span>
+    <div class="big">O(L)</div>
+    <p>L 为单词长度；逐字符走一步建一步，与树中已有多少单词无关。</p>
+  </div>
+  <div class="card">
+    <span class="tag ok">search / startsWith</span>
+    <div class="big">O(L)</div>
+    <p>同样只与查询串长度有关——这正是相对哈希表遍历 O(n·L) 的优势所在。</p>
+  </div>
+  <div class="card">
+    <span class="tag mid">空间</span>
+    <div class="big">O(总字符数)</div>
+    <p>最坏每个字符一个节点；公共前缀共享节点，实际往往远小于所有字符串长度之和。</p>
+  </div>
+</div>
+
+<h2>八、常见疑问与拓展</h2>
+<div class="card">
+  <ul>
+    <li><strong>Q：children 用字典还是长度 26 的数组？</strong><br>
+      字典按需创建、不限字符集，Python 里写起来最顺手；数组（<code>[None]*26</code>）索引快、缓存友好，但空间固定 26 倍且只适用小写字母。面试两者都可以，先说清取舍更加分。</li>
+    <li><strong>Q：为什么 search("app") 是 false，明明树里有这条路径？</strong><br>
+      因为「路径存在」只说明 app 是某个单词的<strong>前缀</strong>；是否真的插入过 app 这个<strong>完整单词</strong>，由终点节点的 <code>is_end</code> 说了算。is_end 就是 Trie 里"句号"的存在。</li>
+    <li><strong>Q：想统计"有多少单词以某前缀开头 / 以某节点结尾"怎么办？</strong><br>
+      把 <code>is_end</code> 升级成 <code>pass_count</code>（经过次数）和 <code>end_count</code>（结束次数）两个计数器，insert 时沿途 +1、终点 +1，即可 O(L) 完成统计（如 LC 1804）。</li>
+    <li><strong>相关题目：</strong>LC 211 添加与搜索单词（含 '.' 通配，需 DFS）、LC 212 单词搜索 II（Trie + 网格回溯）、LC 421 数组中两个数的最大异或值（Trie 存二进制位）、LC 14 最长公共前缀（可用 Trie 思路）。</li>
+  </ul>
+</div>
+
+<p class="footer-note">Trie 一句话模板：children 字典铺路径，is_end 标词尾，search 看句号、startsWith 不看。</p>
+
+<script>
+(function () {
+  // ===== Trie 数据结构（JS 版）=====
+  function makeNode() { return { children: {}, isEnd: false }; }
+  var root = makeNode();
+
+  // ===== 示例流程 =====
+  var DEMO = [
+    { op: 'insert', arg: 'apple' },
+    { op: 'search', arg: 'apple' },
+    { op: 'search', arg: 'app' },
+    { op: 'startsWith', arg: 'app' },
+    { op: 'insert', arg: 'app' },
+    { op: 'search', arg: 'app' }
+  ];
+  var demoIdx = -1;   // 已执行到 DEMO 的第几步
+  var history = [];
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ===== 执行一次操作，返回 {node, path, ok, failAt, notEndAt} =====
+  function runOp(op, word) {
+    var res = { op: op, word: word, path: [], ok: true, failAt: -1, notEndAt: -1, newNodeIdx: -1 };
+    if (op === 'insert') {
+      var cur = root;
+      var nodes = [];
+      for (var i = 0; i < word.length; i++) {
+        var ch = word[i];
+        if (!cur.children[ch]) {
+          cur.children[ch] = makeNode();
+          if (res.newNodeIdx < 0) res.newNodeIdx = i;   // 记录第一个新建位置
+        }
+        cur = cur.children[ch];
+        nodes.push(cur);
+      }
+      res.path = nodes;
+      cur.isEnd = true;
+      res.ok = true;
+    } else {
+      var cur2 = root;
+      for (var j = 0; j < word.length; j++) {
+        var ch2 = word[j];
+        if (!cur2.children[ch2]) { res.ok = false; res.failAt = j; break; }
+        cur2 = cur2.children[ch2];
+        res.path.push(cur2);
+      }
+      if (res.ok && op === 'search' && !cur2.isEnd) { res.notEndAt = word.length - 1; }
+      res.result = res.ok && (op !== 'search' || cur2.isEnd);
+    }
+    return res;
+  }
+
+  // ===== 渲染 =====
+  function nodeEl(node, char, isRoot, res, depth) {
+    var li = document.createElement('li');
+    var d = document.createElement('div');
+    d.className = 'tnode' + (isRoot ? ' root' : '');
+    d.textContent = isRoot ? '根' : char;
+    var onPath = res && !isRoot && res.path.indexOf(node) >= 0;
+    var idx = onPath ? res.path.indexOf(node) : -1;
+    if (onPath) {
+      if (res.failAt >= 0 && idx === res.failAt - 1) d.classList.add('fail');
+      else if (res.notEndAt === idx) d.classList.add('notend');
+      else d.classList.add('hit');
+    }
+    if (res && res.op === 'insert' && res.ok && idx === res.path.length - 1) d.classList.add('hit');
+    if (node.isEnd) {
+      d.classList.add('isend');
+      var m = document.createElement('span');
+      m.className = 'endmark';
+      m.textContent = '词尾';
+      d.appendChild(m);
+    }
+    li.appendChild(d);
+
+    var keys = Object.keys(node.children);
+    if (keys.length) {
+      var ul = document.createElement('ul');
+      keys.sort().forEach(function (k) {
+        ul.appendChild(nodeEl(node.children[k], k, false, res, depth + 1));
+      });
+      li.appendChild(ul);
+    }
+    return li;
+  }
+
+  function render(res) {
+    var wrap = $('treeRoot');
+    wrap.innerHTML = '';
+    var ul = document.createElement('ul');
+    ul.appendChild(nodeEl(root, '', true, res, 0));
+    wrap.appendChild(ul);
+
+    var badge = $('resultBadge'), line = $('actionLine');
+    if (!res) {
+      badge.innerHTML = '空 Trie：只有根节点';
+      line.textContent = '点击 ▶ 播放示例流程，或自己输入单词操作';
+      return;
+    }
+    if (res.op === 'insert') {
+      badge.innerHTML = 'insert("' + res.word + '") 完成';
+      line.innerHTML = res.newNodeIdx < 0
+        ? '路径已全部存在，只把终点标记为词尾（前缀被复用，不新建节点）'
+        : '从第 ' + (res.newNodeIdx + 1) + ' 个字符开始新建节点，其余字符沿用已有路径';
+    } else {
+      var v = res.result;
+      badge.innerHTML = res.op + '("' + res.word + '") → <span class="' + (v ? 'val-true' : 'val-false') + '">' + v + '</span>';
+      if (res.failAt >= 0) {
+        line.innerHTML = '走到第 ' + (res.failAt + 1) + ' 个字符 "' + res.word[res.failAt] + '" 时路径中断，返回 false';
+      } else if (res.notEndAt >= 0) {
+        line.innerHTML = '路径走通了，但终点不是词尾（is_end 为假）：它只是更长单词的前缀，search 返回 false';
+      } else {
+        line.innerHTML = res.op === 'search'
+          ? '路径走通且终点是词尾（is_end 为真）'
+          : '前缀路径走通即成功，无需检查 is_end';
+      }
+    }
+  }
+
+  function renderLog() {
+    var lh = $('logHistory');
+    lh.innerHTML = '';
+    history.forEach(function (h, i) {
+      var div = document.createElement('div');
+      var txt = h.op + '("' + h.word + '")';
+      if (h.op === 'insert') { div.textContent = txt + ' 完成'; }
+      else { div.className = h.result ? 'ok' : 'no'; div.textContent = txt + ' → ' + h.result; }
+      if (i === history.length - 1) div.classList.add('latest');
+      lh.appendChild(div);
+    });
+    lh.scrollTop = lh.scrollHeight;
+  }
+
+  function doOp(op, word) {
+    word = (word || '').trim().toLowerCase();
+    if (!/^[a-z]+$/.test(word)) {
+      $('actionLine').textContent = '请输入纯小写字母单词（当前演示限定 a-z）';
+      return;
+    }
+    var res = runOp(op, word);
+    history.push(res);
+    render(res);
+    renderLog();
+  }
+
+  // ===== 控件 =====
+  $('btnInsert').onclick = function () { demoIdx = -1; doOp('insert', $('inputWord').value); };
+  $('btnSearch').onclick = function () { demoIdx = -1; doOp('search', $('inputWord').value); };
+  $('btnStartsWith').onclick = function () { demoIdx = -1; doOp('startsWith', $('inputWord').value); };
+  $('inputWord').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('btnInsert').click(); });
+
+  function resetAll() {
+    root = makeNode();
+    demoIdx = -1;
+    history = [];
+    render(null);
+    renderLog();
+  }
+  $('btnReset').onclick = resetAll;
+
+  function replayFromScratch(upto) {
+    root = makeNode();
+    history = [];
+    for (var i = 0; i <= upto; i++) {
+      var s = DEMO[i];
+      history.push(runOp(s.op, s.arg));
+    }
+    demoIdx = upto;
+    render(history[history.length - 1]);
+    renderLog();
+  }
+
+  $('btnDemo').onclick = function () { replayFromScratch(DEMO.length - 1); };
+  $('btnNext').onclick = function () {
+    if (demoIdx >= DEMO.length - 1) demoIdx = -1;
+    replayFromScratch(demoIdx + 1);
+  };
+  $('btnPrev').onclick = function () {
+    if (demoIdx <= 0) { resetAll(); return; }
+    replayFromScratch(demoIdx - 1);
+  };
+
+  render(null);
+})();
+</script>
+</body>
+</html>

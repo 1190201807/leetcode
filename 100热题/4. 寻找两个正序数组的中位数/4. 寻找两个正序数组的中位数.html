@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4. 寻找两个正序数组的中位数 · 动画讲解</title>
+<style>
+  :root{
+    --bg:#0f1220; --bg2:#171b2e; --card:#1d2236; --card2:#232948;
+    --line:#2e3657; --txt:#e8ecf8; --sub:#9aa3c0;
+    --a:#5b8cff; --a2:#7aa5ff;   /* 数组1 蓝 */
+    --b:#ff8a5b; --b2:#ffb07a;  /* 数组2 橙 */
+    --median:#ffd166; --ok:#4cd97b; --err:#ff6b6b;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:radial-gradient(1200px 600px at 70% -10%, #232a4d 0%, var(--bg) 55%);
+    color:var(--txt); font-family:"Segoe UI", "PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    min-height:100vh; padding:32px 18px 80px; line-height:1.6;
+  }
+  .wrap{max-width:1000px; margin:0 auto;}
+  h1{font-size:26px; font-weight:700; letter-spacing:.3px;}
+  .badge{display:inline-block; background:rgba(255,209,102,.12); color:var(--median);
+    border:1px solid rgba(255,209,102,.35); padding:2px 12px; border-radius:20px;
+    font-size:13px; margin-left:10px; vertical-align:middle;}
+  .sub{color:var(--sub); margin-top:8px; font-size:15px;}
+  .tag{display:inline-block; background:var(--card2); border:1px solid var(--line);
+    border-radius:20px; padding:3px 12px; font-size:12.5px; color:var(--a2); margin:10px 6px 4px 0;}
+  .tag.hard{color:#ff8f8f;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:26px; margin-top:22px; box-shadow:var(--shadow);}
+  .card h2{font-size:20px; color:var(--a2); margin-bottom:16px; display:flex;align-items:center;gap:10px;}
+  .card h2 .n{background:var(--a); color:#fff; width:26px;height:26px; border-radius:8px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:14px;}
+
+  .stepbar{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;}
+  .stepbar button{background:var(--card2); color:var(--sub); border:1px solid var(--line);
+    border-radius:10px; padding:7px 14px; font-size:13.5px; cursor:pointer; transition:.15s;}
+  .stepbar button:hover{border-color:var(--a); color:var(--txt);}
+  .stepbar button.cur{background:var(--a); border-color:var(--a); color:#fff; font-weight:600;}
+
+  .controls{display:flex; gap:12px; align-items:center; margin-top:20px; flex-wrap:wrap;}
+  .btn{background:var(--a); color:#fff; border:none; border-radius:10px; padding:10px 22px;
+    font-size:15px; cursor:pointer; transition:.15s; font-weight:600;}
+  .btn:hover{filter:brightness(1.12);}
+  .btn.ghost{background:var(--card2); color:var(--txt); border:1px solid var(--line);}
+  .slider-label{color:var(--sub); font-size:13px;}
+
+  .arrays{display:flex; flex-direction:column; gap:14px; margin-top:22px;}
+  .arrrow{display:flex; align-items:center; gap:12px;}
+  .arrname{width:70px; text-align:right; font-size:16px; font-weight:700; flex-shrink:0;}
+  .arrname.a{color:var(--a2);} .arrname.b{color:var(--b2);}
+  .cells{display:flex; gap:6px; flex-wrap:wrap;}
+  .cell{width:58px; height:58px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:20px; font-weight:600; position:relative; transition:.35s; flex-shrink:0;}
+  .cell.a{background:linear-gradient(160deg,var(--a),#3f66cc); border:2px solid transparent;}
+  .cell.b{background:linear-gradient(160deg,var(--b),#d96c33); border:2px solid transparent;}
+  .cell .idx{position:absolute; top:-20px; left:50%; transform:translateX(-50%);
+    font-size:11px; color:var(--sub); font-weight:400;}
+  .cell.edge{border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,.55);}
+  .cell.hit{box-shadow:0 0 0 3px var(--ok), 0 0 18px rgba(76,217,123,.5); animation:pop .4s;}
+  .cell.new{box-shadow:0 0 0 3px var(--median); animation:pop .4s;}
+  @keyframes pop{0%{transform:scale(.85,.85);} 60%{transform:scale(1.06,1.06);} 100%{transform:scale(1,1);}}
+  .cell.dim{opacity:.4;}
+
+  .merged-wrap{margin-top:26px;}
+  .merged-wrap h3{color:var(--sub); font-size:14px; margin-bottom:10px; font-weight:500;}
+  .merged{display:flex; gap:6px; flex-wrap:wrap;}
+  .merged .mc{width:58px; height:58px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:20px; font-weight:600; background:var(--card2); border:2px solid var(--line); position:relative; transition:.4s;}
+  .merged .mc.half{opacity:.35;}
+  .merged .mc.is-m{background:radial-gradient(circle at 50% 35%, #fff3c4, var(--median)); color:#3a2f00;
+    border-color:var(--median); box-shadow:0 0 16px rgba(255,209,102,.35);}
+  .merged .mc .r{position:absolute; bottom:-22px; left:50%; transform:translateX(-50%); font-size:11px; color:var(--median); font-weight:700;}
+
+  .arrowline{margin:18px 0 0; height:52px; display:flex; align-items:center;}
+  .arrowbox{display:flex; flex-direction:column;}
+  .arw{color:var(--a2); font-weight:700; font-size:15px; line-height:1.3;}
+  .arw.b{color:var(--b2);}
+
+  .info{background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:18px; margin-top:22px;}
+  .info .k{color:var(--sub); font-size:13px; letter-spacing:.5px; margin-bottom:10px; text-transform:uppercase;}
+  .info .body{font-size:16px; font-weight:500; min-height:52px;}
+  .info .body b{color:var(--median);}
+  .chip{display:inline-block; background:var(--card2); border:1px solid var(--line); border-radius:8px;
+    padding:4px 10px; font-size:13px; color:var(--sub); margin:4px 6px 0 0;}
+  .chip small{color:var(--sub); opacity:.8;}
+  .chip b{color:var(--txt); font-size:15px;}
+
+  pre{background:#0b0d18; border:1px solid var(--line); border-radius:12px; padding:20px; overflow-x:auto;
+    font-size:13.5px; line-height:1.7; color:#c8d3f0;}
+  pre .cm{color:#5e6a94;} pre .kw{color:#ff8fb2;} pre .fn{color:#7aa5ff;}
+  pre .num{color:#ffd166;} pre .str{color:#8be9a8;} pre .cmt{color:#5a6483;}
+
+  .quiz{display:grid; gap:12px; margin-top:8px;}
+  .quiz .q{background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:16px;}
+  .quiz .qs{color:var(--txt); font-weight:600; margin-bottom:10px; font-size:15px;}
+  .quiz .opts{display:flex; gap:10px; flex-wrap:wrap;}
+  .quiz .opt{border:1px solid var(--line); background:var(--card2); color:var(--txt); padding:8px 16px;
+    border-radius:10px; cursor:pointer; font-size:14px; transition:.15s;}
+  .quiz .opt:hover{border-color:var(--a);}
+  .quiz .opt.ok{border-color:var(--ok); background:rgba(76,217,123,.12);}
+  .quiz .opt.bad{border-color:var(--err); background:rgba(255,107,107,.12);}
+  .quiz .exp{font-size:13.5px; color:var(--sub); margin-top:10px; display:none;}
+  .quiz .exp.show{display:block;}
+  .idea{background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-top:12px;}
+  .idea-t{color:var(--a2); font-weight:700; font-size:15px; margin-bottom:6px;}
+  .idea p{font-size:14px; color:var(--sub); line-height:1.9;}
+  .cell .lr{position:absolute; bottom:-20px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:800; letter-spacing:.5px; white-space:nowrap;}
+  body.dense .cell{width:36px; height:36px; font-size:14px; border-radius:8px;}
+  body.dense .cells{gap:4px;}
+  body.dense .cell .idx{top:-16px; font-size:10px;}
+  body.dense .cell .lr{bottom:-15px; font-size:10px;}
+  body.dense .merged{gap:4px;}
+  body.dense .merged .mc{width:36px; height:36px; font-size:14px; border-radius:8px;}
+  body.dense .merged .mc .r{bottom:-16px; font-size:10px;}
+  body.dense .arrname{width:56px; font-size:13px;}
+
+  .foot{margin-top:34px; color:var(--sub); font-size:13px; text-align:center;}
+  .foot b{color:var(--txt);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>4. 寻找两个正序数组的中位数 <span class="badge">O(log(m+n)) · 二分查找</span></h1>
+  <div class="sub">给定两个升序数组 nums1 与 nums2（长度分别为 m、n），返回合并后有序数组的 <b>中位数</b>，要求复杂度 O(log(m+n))。</div>
+  <span class="tag hard">难度 · 困难</span>
+  <span class="tag">数组</span>
+  <span class="tag">二分查找</span>
+  <span class="tag">分治</span>
+
+  <!-- ① 问题理解 -->
+  <div class="card">
+    <h2><span class="n">①</span> 中位数是什么？</h2>
+    <p style="color:var(--sub);">
+      把两个数组合成一条<b style="color:var(--txt)">排好序的长链</b>，中位数就是这条长链"正中间"的数。
+      总长度 <b id="totalLabel">—</b>。<br>
+      若总长度为<b style="color:var(--ok)">奇数</b>：正中间那 1 个元素即为中位数；
+      若总长度为<b style="color:var(--median)">偶数</b>：中间 2 个元素的平均值即为中位数。
+    </p>
+    <div class="arrays">
+      <div class="arrrow"><div class="arrname a">nums1</div><div class="cells" id="cells1"></div></div>
+      <div class="arrrow"><div class="arrname b">nums2</div><div class="cells" id="cells2"></div></div>
+    </div>
+    <div class="merged-wrap">
+      <h3>合并后的有序长链（长度 = m + n）</h3>
+      <div class="merged" id="merged"></div>
+    </div>
+    <p id="medianNote" style="margin-top:34px; font-size:15px; color:var(--sub);"></p>
+  </div>
+
+  <!-- ② 递归思路 -->
+  <div class="card">
+    <h2><span class="n">②</span> 直觉：能否用二分</h2>
+    <p style="color:var(--sub);">
+      "找中位数"本质上是<b style="color:var(--txt)">按位置找第 k 小的数</b>。合并后中间位置之前，恰好有
+      <b id="kExplain">—</b> 个元素。先想一个更简单的问题：
+    </p>
+    <div class="info">
+      <div class="k">子问题</div>
+      <div class="body">在两个数组里找<span style="color:var(--ok)">第 k 小的数</span>（k 从 1 开始计数）——记作 <b>getKth(nums1, nums2, k)</b>。</div>
+    </div>
+    <p style="color:var(--sub); margin-top:18px;">
+      每次比较两个数组"大致第 k/2 位"的数，<b style="color:var(--err)">较小的那一位及其前面的所有元素，都不可能成为第 k 小</b>，可以整段丢弃。
+    </p>
+    <div id="kthDemo" style="margin-top:16px;"></div>
+    <p id="kthResult" style="margin-top:14px; font-size:15px; min-height:24px;"></p>
+    <div class="info" style="margin-top:20px; border-color:rgba(255,209,102,.35);">
+      <div class="k" style="color:var(--median)">为什么敢整段丢弃？（正确性 · 计数论证）</div>
+      <div class="body" style="font-weight:400; font-size:14.5px; min-height:0; line-height:1.9;">
+        设 nums1 的第 k/2 个候选 <b>a[k/2−1]</b> ≤ nums2 的第 k/2 个候选 <b>b[k/2−1]</b>（如演示第一轮的 10 ≤ 17）。数一数全合并数组里有多少元素 ≤ <b>a[k/2−1]</b>：<br>
+        ① nums1 里：它自己及之前 → 最多 <b style="color:var(--a2)">k/2 个</b>；<br>
+        ② nums2 里：因 b[k/2−1] ≥ 它且 nums2 升序，该候选之后的元素全被排除，只有其前面可能更小 → 最多 <b style="color:var(--b2)">k/2−1 个</b>。<br>
+        合计 ≤ <b style="color:var(--median)">k−1 个</b> → a[k/2−1] 最坏也只排第 k−1 位，它连同前面的 k/2 个元素全在第 k 位之前，<b>扔掉绝不误伤第 k 小</b>。<br>
+        又因每次丢掉的恰是当前最小的 k/2 个（不变量），原第 k 小在剩下的人中升为第 k−k/2 小 → <b>k −= k/2</b>。k 减到 1 时取两数组头部较小者即为答案。
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 割板法思路 -->
+  <div class="card">
+    <h2><span class="n">③</span> 简洁方案：割板法 · 四步推导</h2>
+
+    <div class="idea">
+      <div class="idea-t">第 0 步 · 换个角度看中位数：它是一条分界线</div>
+      <p>中位数不是"某个数"，而是把所有数分成<b style="color:var(--txt)">小的左半</b>和<b style="color:var(--txt)">大的右半</b>的那条线。总长 T 时左半占 ⌈T/2⌉ 个（奇数时多 1 个）。于是：<b style="color:var(--median)">中位数 = 左半的最大值</b>（偶数时再与右半最小求平均）。问题转化为——<b style="color:var(--txt)">把最小的 ⌈T/2⌉ 个数挑进左半</b>。</p>
+    </div>
+    <div class="idea">
+      <div class="idea-t">第 1 步 · 左半必然是两个数组的"前缀"</div>
+      <p>两数组各自有序，要凑"最小的若干个"只能<b style="color:var(--txt)">从队头连续地拿</b>：假如从 nums1 拿 4 个却跳过 1 去拿 3,8,9,15，左半就不是最小的那批了。收获：不用考虑"挑哪几个"，唯一自由度是<b style="color:var(--a2)">每队拿几个</b>——记作 cut1、cut2。</p>
+    </div>
+    <div class="idea">
+      <div class="idea-t">第 2 步 · 两个未知数坍缩成一个</div>
+      <p>左半名额是定死的：<b style="color:var(--txt)">cut1 + cut2 = <span id="leftHalf">—</span></b>。所以 <b style="color:var(--txt)">cut2 = ⌈T/2⌉ − cut1</b>——<b style="color:var(--median)">定了 cut1，刀在 nums2 的位置自动算出</b>。整个问题只剩一个待定数 cut1 ∈ [0, m]，共 m+1 种切法。</p>
+    </div>
+    <div class="idea">
+      <div class="idea-t">第 3 步 · 验收标准：左半最大 ≤ 右半最小</div>
+      <p>每个数组内部天生有序（自己队里左 ≤ 右必然成立），所以只需查两条<b style="color:var(--median)">跨队</b>不等式：<b style="color:var(--median)">L1 ≤ R2</b> 且 <b style="color:var(--median)">L2 ≤ R1</b>。不通过时，信号还直接指出方向：<b>L1 &gt; R2 → 切大了</b>（cut1 左移）；<b>L2 &gt; R1 → 切小了</b>（cut1 右移）。</p>
+    </div>
+    <div class="idea">
+      <div class="idea-t">第 4 步 · 信号单调 → 二分 cut1</div>
+      <p>把 cut1 从小到大扫一遍，"过小 / 过大"的信号单调变化，正是二分的适用条件。区间 [0, m] 每次砍半，<b style="color:var(--ok)">O(log min(m,n))</b> 步锁定正确切法。下面的第④部分就是这个二分的逐步演示。</p>
+    </div>
+
+    <div class="info" style="margin-top:18px;">
+      <div class="k">一句话串联</div>
+      <div class="body" style="min-height:0; font-weight:400; font-size:14.5px; line-height:1.9;">
+        中位数 = 左半最大 → 左半必是每队前缀 → 自由度只剩 cut1 → 名额公式消灭 cut2 → 两条交叉不等式当验收器 → 信号单调 → 二分 cut1。<br>
+        对比 getKth 法：getKth 是"一个个往外扔"，割板法是"直接一次性分配好左半名额"、直奔终态，所以代码更短、更快（O(log min(m,n))）。
+      </div>
+    </div>
+
+    <h3 style="color:var(--sub); font-size:14px; margin:24px 0 4px; font-weight:500;">切对时长这样（┃ = 刀；左侧变暗 = 划入左半；红框 = 各自左半的最大值 L1、L2）</h3>
+    <div id="cutDemo"></div>
+    <p id="cutNote" style="margin-top:26px; font-size:15px; min-height:24px;"></p>
+  </div>
+
+  <!-- ④ 逐步动画 -->
+  <div class="card">
+    <h2><span class="n">④</span> 二分搜索的逐步演示</h2>
+    <p style="color:var(--sub);">我们只对 <b style="color:var(--a2)">较短数组 nums1</b> 在 [0, m] 区间做二分。每一步具体展示完整操作：<b style="color:var(--txt)">搜索区间 → 取中点 cut1 → 名额公式算出 cut2 → 刀落位（变暗 = 划入左半）→ 验收两条不等式 → 按信号收窄区间</b>。</p>
+
+    <div class="controls">
+      <button class="btn" id="btnPrev">◀ 上一步</button>
+      <button class="btn" id="btnNext">下一步 ▶</button>
+      <button class="btn ghost" id="btnAuto">▶ 自动播放</button>
+      <span class="slider-label">步骤</span>
+      <input type="range" id="slider" min="1" max="1" value="1" style="flex:1; accent-color:var(--a);">
+    </div>
+
+    <div class="stepbar" id="stepbar"></div>
+    <div class="arrays" style="margin-top:34px; row-gap:44px;">
+      <div class="arrrow"><div class="arrname a">nums1</div><div class="cells" id="acells1"></div></div>
+      <div class="arrrow"><div class="arrname b">nums2</div><div class="cells" id="acells2"></div></div>
+    </div>
+    <div class="info" style="margin-top:26px;">
+      <div class="k">当前步骤解释</div>
+      <div class="body" id="stepExplain"></div>
+    </div>
+  </div>
+
+  <!-- ⑤ 代码 -->
+  <div class="card">
+    <h2><span class="n">⑤</span> 完整代码 · Python</h2>
+    <pre><code><span class="cm"># 保证 nums1 是较短数组，便于二分</span>
+<span class="kw">def</span> <span class="fn">findMedianSortedArrays</span>(nums1, nums2):
+    <span class="kw">if</span> len(nums1) &gt; len(nums2):
+        nums1, nums2 = nums2, nums1
+    m, n = len(nums1), len(nums2)
+    <span class="cm"># 合并后左边应有 (m+n+1)//2 个元素</span>
+    lo, hi = <span class="num">0</span>, m
+
+    <span class="kw">while</span> lo <span class="kw">&lt;=</span> hi:
+        cut1 = (lo + hi) // <span class="num">2</span>          <span class="cm"># 在 nums1 中取前 cut1 个</span>
+        cut2 = (m + n + <span class="num">1</span>) // <span class="num">2</span> - cut1   <span class="cm"># 自动补齐到左半长度</span>
+
+        L1 = nums1[cut1 - <span class="num">1</span>] <span class="kw">if</span> cut1 &gt; <span class="num">0</span> <span class="kw">else</span> -<span class="num">10</span>**<span class="num">20</span>
+        R1 = nums1[cut1]     <span class="kw">if</span> cut1 &lt; m <span class="kw">else</span>  <span class="num">10</span>**<span class="num">20</span>
+        L2 = nums2[cut2 - <span class="num">1</span>] <span class="kw">if</span> cut2 &gt; <span class="num">0</span> <span class="kw">else</span> -<span class="num">10</span>**<span class="num">20</span>
+        R2 = nums2[cut2]     <span class="kw">if</span> cut2 &lt; n <span class="kw">else</span>  <span class="num">10</span>**<span class="num">20</span>
+
+        <span class="cm"># 左侧最大值 vs 右侧最小值 —— 交叉比较</span>
+        <span class="kw">if</span> L1 <span class="kw">&lt;=</span> R2 <span class="kw">and</span> L2 <span class="kw">&lt;=</span> R1:     <span class="cm"># 分割正确</span>
+            <span class="kw">if</span> (m + n) % <span class="num">2</span> == <span class="num">1</span>:
+                <span class="kw">return</span> max(L1, L2)                  <span class="cm"># 奇数：左侧最大</span>
+            <span class="kw">return</span> (max(L1, L2) + min(R1, R2)) / <span class="num">2.0</span> <span class="cm"># 偶数：平均</span>
+        <span class="kw">elif</span> L1 &gt; R2:      <span class="cm"># nums1 左太多 → 左移 cut1</span>
+            hi = cut1 - <span class="num">1</span>
+        <span class="kw">else</span>:              <span class="cm"># L2 &gt; R1：nums1 右太小 → 右移 cut1</span>
+            lo = cut1 + <span class="num">1</span>
+</code></pre>
+  </div>
+
+  <!-- ⑥ 思考题 -->
+  <div class="card">
+    <h2><span class="n">⑥</span> 自己检验一下</h2>
+    <div class="quiz" id="quiz"></div>
+  </div>
+
+  <div class="foot">
+    演示用例：<b>nums1 = [1..20]</b>（m=20），<b>nums2 = [5,6,...,11, 15,16,...,28]</b>（n=21）→ 总长 41（奇数），中位数 = 第 21 个元素 = <b>14</b>。
+    二分过程共 5 次尝试：cut1 = 10(切小了) → 15(切大了) → 12(切小了) → 13(切小了) → <b>14 ✔</b>。<br>
+    可切换为偶数长度用例 <b style="cursor:pointer;text-decoration:underline" onclick="setEven()">（点我）</b>：总长 40，中位数 = (13+14)/2 = <b>13.5</b>（4 次尝试）。
+  </div>
+</div>
+
+<script>
+/* ================= 用例 ================= */
+const seq=(s,e)=>Array.from({length:e-s+1},(_,i)=>s+i);
+const CASES = {
+  // 二分路径：cut1 = 10(切小了) → 15(切大了) → 12(切小了) → 13(切小了) → 14 ✔，中位数 14
+  odd:  { a:seq(1,20), b:[...seq(5,11),...seq(15,28)] },   // m=20, n=21, 总长41
+  // 二分路径：cut1 = 10(切小了) → 15(切大了) → 12(切小了) → 13 ✔，中位数 (13+14)/2
+  even: { a:seq(1,20), b:[...seq(5,11),...seq(15,27)] },   // m=20, n=20, 总长40
+};
+let DATA = CASES.odd;
+let A = DATA.a, B = DATA.b, m = A.length, n = B.length;
+const NEG = -1e12, POS = 1e12;
+
+/* ================= 工具 ================= */
+function mergeSorted(a,b){
+  const res=[],i=0,j=0; let x=0,y=0;
+  while(x<a.length&&y<b.length) res.push(a[x]<=b[y]?a[x++]:b[y++]);
+  while(x<a.length) res.push(a[x++]);
+  while(y<b.length) res.push(b[y++]);
+  return res;
+}
+function setEven(){ DATA=CASES.even; A=DATA.a;B=DATA.b;m=A.length;n=B.length; renderAll(); }
+
+/* ================= 第① 部分渲染 ================= */
+function renderPart1(){
+  const mrg = mergeSorted(A,B);
+  const ci = document.getElementById('cells1'), cj = document.getElementById('cells2');
+  ci.innerHTML=''; cj.innerHTML='';
+  A.forEach((v,i)=> ci.insertAdjacentHTML('beforeend',`<div class="cell a"><span class="idx merge">${i}</span>${v}</div>`));
+  B.forEach((v,i)=> cj.insertAdjacentHTML('beforeend',`<div class="cell b"><span class="idx">${i}</span>${v}</div>`));
+  const mm = document.getElementById('merged');
+  mm.innerHTML='';
+  mrg.forEach((v,i)=>{
+    const isM = mrg.length%2===1 ? i===Math.floor(mrg.length/2) : (i===mrg.length/2-1||i===mrg.length/2);
+    const rank = mrg.length%2===1 ? Math.floor(mrg.length/2)+1 : mrg.length/2;
+    const open = mrg.length%2===1 ? i===Math.floor(mrg.length/2) : (i===mrg.length/2-1||i===mrg.length/2);
+    let rlabel='';
+    if(isM){ rlabel = mrg.length%2===1?`✪ 第${rank}个`:`部分✪`; }
+    mm.insertAdjacentHTML('beforeend',`<div class="mc ${open?'is-m':''}">${v}<span class="r">${rlabel}</span></div>`);
+  });
+  document.getElementById('totalLabel').textContent = `${mrg.length}`;
+  // 说明文字
+  const med = mrg.length%2===1 ? mrg[Math.floor(mrg.length/2)] : (mrg[mrg.length/2-1]+mrg[mrg.length/2])/2;
+  document.getElementById('medianNote').innerHTML =
+    mrg.length%2===1
+      ? `总长为 <b style="color:var(--txt)">${mrg.length}</b>（奇数）→ 中位数是第 ${Math.floor(mrg.length/2)+1} 个元素 = <b style="color:var(--median);font-size:18px">${med}</b>（黄色高亮单元格）。`
+      : `总长为 <b style="color:var(--txt)">${mrg.length}</b>（偶数）→ 中位数 = (第 ${mrg.length/2} 个 + 第 ${mrg.length/2+1} 个)/2 = <b style="color:var(--median);font-size:18px">${med}</b>（两个黄色高亮单元格的平均）。`;
+}
+
+/* ================= 第② getKth 演示 ================= */
+function getKthTrace(a0,b0,k){
+  // 逐轮演示：每轮只比较两个数组各自“第 k/2 个候选元素”，返回 {html, ans}
+  let a=a0.slice(), b=b0.slice();
+  let round=0, lastK, ans=null;
+  let html='';
+  // 展示“前缀 + 高亮被丢弃的部分”
+  const chipArr=(arr, upTo, pivotIdx)=>arr.slice(0,upTo).map((v,i)=>
+    `<span style="background:${i===pivotIdx?`var(--median);color:#3a2f00;font-weight:700`:`var(--card2)`};border:1px solid ${i===pivotIdx?'var(--median)':'var(--line)'};border-radius:6px;padding:2px 8px;font-size:13px;margin:2px">${v}</span>`).join(' ');
+  while(true){
+    round++;
+    if(a.length===0){ ans=b[k-1]; html+=`<div style="color:var(--sub);font-size:13.5px;margin:10px 0">第 ${round} 轮：nums1 已空 → 答案即当前 nums2 的第 ${k} 小 = <b style="color:var(--ok)">${ans}</b></div>`; break; }
+    if(b.length===0){ ans=a[k-1]; html+=`<div style="color:var(--sub);font-size:13.5px;margin:10px 0">第 ${round} 轮：nums2 已空 → 答案即当前 nums1 的第 ${k} 小 = <b style="color:var(--ok)">${ans}</b></div>`; break; }
+    if(k===1){ ans=Math.min(a[0],b[0]); html+=`<div style="color:var(--sub);font-size:13.5px;margin:10px 0">第 ${round} 轮：k=1 → 取两数组头部较小者 = <b style="color:var(--ok)">${ans}</b></div>`; break; }
+    // 候选元素 = 每数组的第 k/2 个；丢失数 t = min(k/2, 数组长度)
+    const ta=Math.min(k>>1, a.length), tb=Math.min(k>>1, b.length);
+    const va=a[ta-1], vb=b[tb-1];   // 真正被比较的“中间候选”只是这两个
+    const loseA = va<=vb;           // 谁小谁所在数组的前 k/2 个全部扔掉
+    const loseCount = loseA? ta : tb;
+    const kShrink = lastK!==undefined ? `<span style="color:var(--sub)">（上一轮丢弃了 ${lastK-k} 个 → k 从 ${lastK} 变为 ${k}，候选位置随之回退到第 ${k>>1} 个）</span>` : '';
+    html+=`<div style="font-size:13.5px;margin:10px 0;color:var(--txt)">`+
+      `<b>第 ${round} 轮</b>（k=${k}，取剩余数组各自第 ${k>>1} 个元素为候选）${kShrink}：<br>`+
+      `<div style="margin:6px 0">nums1 → ${chipArr(a,ta,ta-1)}</div>`+
+      `<div style="margin:6px 0">nums2 → ${chipArr(b,tb,tb-1)}</div>`+
+      `只比较两个<u>黄色候选</u>：<b style="color:var(--a2)">${va}</b> vs <b style="color:var(--b2)">${vb}</b> → 因为 <b style="color:var(--err)">${loseA?va+' ≤ '+vb:vb+' ≤ '+va}</b>，所以 ${loseA?'nums1':'nums2'} 最前面 ${loseCount} 个（黄色候选及其之前）<b style="color:var(--err)">全部不可能成为第 ${k} 小</b>，丢弃。`+
+      `</div>`;
+    if(loseA){ a.splice(0,ta); k-=ta; } else { b.splice(0,tb); k-=tb; }
+    lastK = k;
+  }
+  return {html, ans};
+}
+
+function renderPart2(){
+  const ke=document.getElementById('kExplain');
+  if(ke) ke.textContent = `(m+n+1)/2 = ${(m+n+1)>>1}`;
+  const host = document.getElementById('kthDemo');
+  const T = m+n;
+  const fullK   = T%2===1 ? (T+1)>>1 : T>>1;      // 中位数位置（偶数时取左边那个）
+  const secondK = T%2===1 ? null     : (T>>1)+1;  // 偶数时右边那个
+  const mrg = mergeSorted(A,B);
+  // 与割板法同一组数组
+  let html=`<h3 style="color:var(--sub);font-size:14px;margin-bottom:8px">getKth 演示 · 使用与割板法完全相同的数组（nums1 = [${A.join(', ')}]，nums2 = [${B.join(', ')}]），求合并后第 ${fullK} 小${secondK?` 与第 ${secondK} 小`:'（即正中间）'}：</h3>`;
+  const t1 = getKthTrace(A,B,fullK);
+  html += t1.html + `<div style="margin-top:12px;font-size:14px;color:var(--ok)">✔ 第 ${fullK} 小 = ${t1.ans}</div>`;
+  if(secondK){
+    const t2 = getKthTrace(A,B,secondK);
+    html += `<h3 style="color:var(--sub);font-size:14px;margin:18px 0 4px">再求第 ${secondK} 小（过程完全同理）：</h3>`
+          + t2.html
+          + `<div style="margin-top:12px;font-size:14px;color:var(--ok)">✔ 第 ${secondK} 小 = ${t2.ans}</div>`
+          + `<div style="margin-top:10px;font-size:15px;color:var(--median)">中位数 = (${t1.ans} + ${t2.ans}) / 2 = <b>${(t1.ans+t2.ans)/2}</b></div>`;
+  } else {
+    html += `<div style="margin-top:10px;font-size:15px;color:var(--median)">总长 ${T} 为奇数 → 中位数 = 第 ${fullK} 小 = <b>${t1.ans}</b></div>`;
+  }
+  host.innerHTML = html;
+  document.getElementById('kthResult').innerHTML =
+    `对照合并长链（共 ${T} 个）：<b style="color:var(--txt)">${mrg.join(', ')}</b><br>`+
+    `正中间${secondK?'的两个数':'的数'} = <b style="color:var(--median)">${secondK?`${mrg[fullK-1]} 和 ${mrg[secondK-1]}`:mrg[fullK-1]}</b>，与 getKth 求出的结果一致 → 直觉法同样得到中位数。`+
+    `<span style="color:var(--sub)"> 每轮 k 至少减半 → O(log k) = O(log(m+n)) 轮。</span>`;
+}
+
+/* ================= 第③ 割板演示 ================= */
+function renderCut(){
+  const host=document.getElementById('cutDemo');
+  host.innerHTML='';
+  function chipA(a){ return a.insertAdjacentHTML; }
+  // 找一个正确割法
+  let best=null;
+  for(let cut1=0;cut1<=m;cut1++){
+    const cut2=((m+n+1)>>1) - cut1;
+    if(cut2<0||cut2>n) continue;
+    const L1=cut1>0?A[cut1-1]:NEG, R1=cut1<m?A[cut1]:POS;
+    const L2=cut2>0?B[cut2-1]:NEG, R2=cut2<n?B[cut2]:POS;
+    if(L1<=R2&&L2<=R1){ best={cut1,cut2}; break; }
+  }
+  const c1=best.cut1, c2=best.cut2;
+  document.getElementById('leftHalf').textContent = `(m+n+1)/2 = ${(m+n+1)>>1}`;
+  // 数组1
+  host.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:12px;margin-top:8px"><div class="arrname a">nums1</div><div class="cells" id="cutA1"></div></div>`);
+  host.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:12px;margin-top:8px"><div class="arrname b">nums2</div><div class="cells" id="cutA2"></div></div>`);
+  const cA=document.getElementById('cutA1'), cB=document.getElementById('cutA2');
+  const knife=`<div style="align-self:center;color:var(--median);font-weight:800;font-size:17px;margin:0 4px;white-space:nowrap">┃刀</div>`;
+  A.forEach((v,i)=>{
+    cA.insertAdjacentHTML('beforeend',
+      `<div class="cell a ${i<c1?'dim':''}" style="${i===c1-1?'box-shadow:0 0 0 3px var(--err)':''}"><span class="idx">${i}</span>${v}</div>`);
+    if(i===c1-1) cA.insertAdjacentHTML('beforeend', knife);
+  });
+  if(c1===0) cA.insertAdjacentHTML('afterbegin', knife);
+  B.forEach((v,i)=>{
+    cB.insertAdjacentHTML('beforeend',
+      `<div class="cell b ${i<c2?'dim':''}" style="${i===c2-1?'box-shadow:0 0 0 3px var(--err)':''}"><span class="idx">${i}</span>${v}</div>`);
+    if(i===c2-1) cB.insertAdjacentHTML('beforeend', knife);
+  });
+  if(c2===0) cB.insertAdjacentHTML('afterbegin', knife);
+  const L1=c1>0?A[c1-1]:'-∞', R1=c1<m?A[c1]:'+∞';
+  const L2=c2>0?B[c2-1]:'-∞', R2=c2<n?B[c2]:'+∞';
+  document.getElementById('cutNote').innerHTML =
+    `受检条件 · <span style="color:var(--sub)">左半长度总计 = (m+n+1)/2 = ${(m+n+1)>>1}　·　┃刀 = 分割线，刀左侧（变暗的元素）划入左半</span><br><br>`+
+    `<span class="chip">nums1左最大 L1=<b>${L1}</b> <small>(红框)</small></span> `+
+    `<span class="chip">nums2右最小 R2=<b>${R2}</b> <small>(第一个未选中)</small></span> `+
+    `<span class="chip">nums2左最大 L2=<b>${L2}</b> <small>(红框)</small></span> `+
+    `<span class="chip">nums1右最小 R1=<b>${R1}</b> <small>(第一个未选中)</small></span><br><br>`+
+    `交叉检查：L1(${L1}) ≤ R2(${R2}) ✔　且　L2(${L2}) ≤ R1(${R1}) ✔ → 分割正确。`+
+    `左侧最大值 = max(L1,L2) = <b style="color:var(--median)">${c1>0&&c2>0?Math.max(A[c1-1],B[c2-1]):c1>0?A[c1-1]:B[c2-1]}</b>`;
+}
+
+/* ================= 第④ 二分动画 ================= */
+let steps=[];
+function buildSteps(){
+  steps=[];
+  let lo=0, hi=m;
+  steps.push({lo,hi});
+  let guard=0;
+  while(lo<=hi && guard<60){
+    guard++;
+    const cut1=(lo+hi)>>1;
+    const cut2=((m+n+1)>>1) - cut1;
+    const L1=cut1>0?A[cut1-1]:NEG, R1=cut1<m?A[cut1]:POS;
+    const L2=cut2>0?B[cut2-1]:NEG, R2=cut2<n?B[cut2]:POS;
+    if(L1<=R2 && L2<=R1){
+      const med = (m+n)%2? Math.max(L1,L2) : (Math.max(L1,L2)+Math.min(R1,R2))/2;
+      steps.push({lo,hi,alo:lo,ahi:hi,cut1,cut2,L1,R1,L2,R2,verdict:'正确',med});
+      break;
+    } else if(L1>R2){
+      const plo=lo, phi=hi; hi=cut1-1;
+      steps.push({lo,hi,alo:plo,ahi:phi,cut1,cut2,L1,R1,L2,R2,verdict:'左溢'});
+    } else {
+      const plo=lo, phi=hi; lo=cut1+1;
+      steps.push({lo,hi,alo:plo,ahi:phi,cut1,cut2,L1,R1,L2,R2,verdict:'左亏'});
+    }
+  }
+}
+
+function renderAni(idx){
+  const s=steps[idx];
+  const c1=document.getElementById('acells1'), c2=document.getElementById('acells2');
+  c1.innerHTML=''; c2.innerHTML='';
+  const ex=document.getElementById('stepExplain');
+  const knife=`<div style="align-self:center;color:var(--median);font-weight:800;font-size:17px;margin:0 4px;white-space:nowrap">┃刀</div>`;
+  const half=(m+n+1)>>1;
+  // 初始步：只摆出两个数组
+  if(s.cut1===undefined){
+    A.forEach((v,i)=>c1.insertAdjacentHTML('beforeend',`<div class="cell a"><span class="idx">${i}</span>${v}</div>`));
+    B.forEach((v,i)=>c2.insertAdjacentHTML('beforeend',`<div class="cell b"><span class="idx">${i}</span>${v}</div>`));
+    ex.innerHTML=`初始：cut1 的搜索区间为 <b style="color:var(--a2)">[lo=${s.lo}, hi=${s.hi}]</b>（nums1 出 0 ~ ${m} 个，共 ${m+1} 种切法）。没有先验信息，第一步就猜正中间：<b>cut1 = (lo+hi)/2</b>。`;
+    return;
+  }
+  const {cut1,cut2,L1,R1,L2,R2,verdict}=s;
+  // 渲染刀落位：刀左侧变暗 = 划入左半；红框 = 左半最大(L1/L2)，绿框 = 右半最小(R1/R2)
+  A.forEach((v,i)=>{
+    let style='', lr='';
+    if(i===cut1-1){ style='box-shadow:0 0 0 3px var(--err)'; lr='<span class="lr" style="color:var(--err)">L1</span>'; }
+    else if(i===cut1){ style='box-shadow:0 0 0 3px var(--ok)'; lr='<span class="lr" style="color:var(--ok)">R1</span>'; }
+    c1.insertAdjacentHTML('beforeend',`<div class="cell a ${i<cut1?'dim':''}" style="${style}"><span class="idx">${i}</span>${v}${lr}</div>`);
+    if(i===cut1-1) c1.insertAdjacentHTML('beforeend', knife);
+  });
+  if(cut1===0) c1.insertAdjacentHTML('afterbegin', knife);
+  B.forEach((v,i)=>{
+    let style='', lr='';
+    if(i===cut2-1){ style='box-shadow:0 0 0 3px var(--err)'; lr='<span class="lr" style="color:var(--err)">L2</span>'; }
+    else if(i===cut2){ style='box-shadow:0 0 0 3px var(--ok)'; lr='<span class="lr" style="color:var(--ok)">R2</span>'; }
+    c2.insertAdjacentHTML('beforeend',`<div class="cell b ${i<cut2?'dim':''}" style="${style}"><span class="idx">${i}</span>${v}${lr}</div>`);
+    if(i===cut2-1) c2.insertAdjacentHTML('beforeend', knife);
+  });
+  if(cut2===0) c2.insertAdjacentHTML('afterbegin', knife);
+  // 解释面板：展示每一步的具体操作
+  const fa=a=>a.length?a.join(', '):'∅';
+  const la=A.slice(0,cut1), lb=B.slice(0,cut2), ra=A.slice(cut1), rb=B.slice(cut2);
+  const c1ok=L1<=R2, c2ok=L2<=R1;
+  const chk=`<b style="color:${c1ok?'var(--ok)':'var(--err)'}">L1(${fmt(L1)}) ≤ R2(${fmt(R2)})</b> ${c1ok?'✓':'✗'}　`+
+            `<b style="color:${c2ok?'var(--ok)':'var(--err)'}">L2(${fmt(L2)}) ≤ R1(${fmt(R1)})</b> ${c2ok?'✓':'✗'}`;
+  let html=`<div style="line-height:2.1">`
+    +`<span class="chip">搜索区间 <b>[${s.alo}, ${s.ahi}]</b></span>`
+    +`<span class="chip">取中点 cut1 = <b style="color:var(--a2)">${cut1}</b></span>`
+    +`<span class="chip">名额公式 cut2 = ${half}−${cut1} = <b style="color:var(--b2)">${cut2}</b></span><br>`
+    +`左半 = nums1的{${fa(la)}} ∪ nums2的{${fa(lb)}}　·　右半 = nums1的{${fa(ra)}} ∪ nums2的{${fa(rb)}}<br>`;
+  if(verdict==='正确'){
+    html+=`验收：${chk}　→　<b style="color:var(--ok)">两条都过，切对了！</b><br>`
+        +`中位数 = ${(m+n)%2===1
+            ?`左半最大 = max(L1, L2) = `
+            :`(左半最大 + 右半最小) / 2 = `
+          }<b style="color:var(--median); font-size:19px">${s.med}</b>`;
+  } else {
+    html+=`验收：${chk}<br>`
+        +( c1ok
+          ?`结论：L2 &gt; R1 —— nums2 的大个子被拉进了左半，说明 nums1 出得太少 → <b style="color:var(--median)">切小了</b>，cut1 右移：lo = cut1+1 = ${cut1+1}`
+          :`结论：L1 &gt; R2 —— nums1 的大个子被拉进了左半，说明 nums1 出得太多 → <b style="color:var(--median)">切大了</b>，cut1 左移：hi = cut1−1 = ${cut1-1}` )
+        +`，区间收窄为 <b style="color:var(--a2)">[${s.lo}, ${s.hi}]</b>`;
+  }
+  html+=`</div>`;
+  ex.innerHTML=html;
+}
+function fmt(v){ return v===NEG?'-∞':v===POS?'+∞':v; }
+
+/* ================= 渲染入口 & 控件 ================= */
+let cur=0, timer=null;
+function buildStepbar(){
+  const bar=document.getElementById('stepbar');
+  bar.innerHTML='';
+  steps.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.textContent = i===0?`初始 · 区间 [0,${m}]` : (s.verdict==='正确'?`✔ 切对了 (cut1=${s.cut1})`:`切一刀 (cut1=${s.cut1})`);
+    b.onclick=()=>{cur=i;sync();};
+    if(i===cur)b.className='cur';
+    bar.appendChild(b);
+  });
+}
+function sync(){
+  const sl=document.getElementById('slider');
+  sl.min=0; sl.max=steps.length-1; sl.value=cur;
+  renderAni(cur);
+  buildStepbar();
+  document.getElementById('btnPrev').disabled = cur===0;
+  document.getElementById('btnNext').disabled = cur===steps.length-1;
+}
+document.getElementById('slider').oninput=e=>{cur=+e.target.value;sync();};
+document.getElementById('btnNext').onclick=()=>{if(cur<steps.length-1){cur++;sync();}};
+document.getElementById('btnPrev').onclick=()=>{if(cur>0){cur--;sync();}};
+document.getElementById('btnAuto').onclick=()=>{
+  if(timer){clearInterval(timer);timer=null;document.getElementById('btnAuto').textContent='▶ 自动播放';return;}
+  document.getElementById('btnAuto').textContent='⏸ 暂停';
+  timer=setInterval(()=>{
+    if(cur<steps.length-1){cur++;sync();} else {clearInterval(timer);timer=null;document.getElementById('btnAuto').textContent='▶ 自动播放';}
+  },1700);
+};
+
+/* ================= 思考题 ================= */
+const QUIZ=[
+ {q:"上例中，合并后总长为 41（奇数），中位数应该取哪个位置？",
+  opts:[["第 20 个","bad"],["第 21 个","ok"],["第 20、21 个的平均","bad"]],
+  exp:"奇数长度取正中间 1 个 → 第 (41+1)/2 = 第 21 个元素。"},
+ {q:"二分搜索时，为何只对较短的 nums1 做二分？",
+  opts:[["效率更高但没必要","bad"],["保证左边长度一定不越界、两个数组都能正确用下标","ok"],["因为中位数一定在短数组里","bad"]],
+  exp:"较短的 mn，会对长数组 computed 出越界的 cut2。固定 m ≤ n 后，cut2 ∈ [0,n] 恒成立，代码更安全；同时因此二分区间可缩到 O(log(min(m,n)))。"},
+ {q:"判断分割正确（交叉条件）是哪两条？",
+  opts:[["L1≤R1 且 L2≤R2","bad"],["L1≤R2 且 L2≤R1","ok"],["L1≤R1 且 L2≤R1","bad"]],
+  exp:"左侧整体必须在右侧整体之前：nums1 左 ≤ nums2 右，同时 nums2 左 ≤ nums1 右。"},
+ {q:"总长偶数时的中位数怎么算？",
+  opts:[["取左侧最大","bad"],["(max(L1,L2) + min(R1,R2)) / 2","ok"],["取右侧最小","bad"]],
+  exp:"偶数左右都取中间，中位数 = (左半最大 + 右半最小)/2。"},
+];
+let answered={};
+function buildQuiz(){
+  const host=document.getElementById('quiz');
+  host.innerHTML='';
+  QUIZ.forEach((item,qi)=>{
+    const wrap=document.createElement('div'); wrap.className='q';
+    wrap.appendChild(Object.assign(document.createElement('div'),{className:'qs',textContent:`Q${qi+1}. ${item.q}`}));
+    const opts=document.createElement('div'); opts.className='opts';
+    item.opts.forEach(([t,verdict])=>{
+      const b=document.createElement('button'); b.className='opt'; b.textContent=t;
+      b.onclick=()=>{
+        opts.querySelectorAll('.opt').forEach(o=>o.classList.remove('ok','bad'));
+        b.classList.add(verdict==='ok'?'ok':'bad');
+        wrap.querySelector('.exp').classList.add('show');
+        answered[qi]=verdict==='ok';
+      };
+      opts.appendChild(b);
+    });
+    wrap.appendChild(opts);
+    wrap.appendChild(Object.assign(document.createElement('div'),{className:'exp',textContent:`✔ ${item.exp}`}));
+    host.appendChild(wrap);
+  });
+}
+
+/* ================= 启动 ================= */
+function renderAll(){
+  document.body.classList.toggle('dense', Math.max(A.length,B.length)>12);
+  renderPart1(); renderPart2(); renderCut();
+  buildSteps(); cur=0; sync();
+  buildQuiz();
+}
+renderAll();
+</script>
+</body>
+</html>

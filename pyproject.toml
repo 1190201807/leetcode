@@ -1,0 +1,23 @@
+[tool.black]
+line-length = 88
+target-version = ['py38']
+skip-string-normalization = false
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.[^/]+|  # hidden directories and files
+    build|
+    dist|
+    .eggs|
+    .git|
+    .hg|
+    .mypy_cache|
+    .tox|
+    .venv|
+    __pycache__|
+    _build|
+    buck-out|
+    build|
+    dist
+)/
+'''

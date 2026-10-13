@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeetCode 15. 三数之和 — 图解双指针</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #171b2e;
+    --panel2: #1e2440;
+    --text: #e8eaf6;
+    --muted: #9aa3c7;
+    --accent: #4f8cff;
+    --green: #3ddc97;
+    --red: #ff6b81;
+    --yellow: #ffd166;
+    --purple: #b18cff;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  h1 { font-size: 1.7em; margin-bottom: 6px; }
+  h1 .lc-tag {
+    background: var(--yellow); color: #333; font-size: .55em;
+    padding: 2px 10px; border-radius: 6px; vertical-align: middle; margin-right: 10px;
+    font-weight: bold;
+  }
+  h2 {
+    margin: 44px 0 14px; font-size: 1.3em;
+    padding-left: 12px; border-left: 4px solid var(--accent);
+  }
+  p, li { color: var(--muted); }
+  strong, em { color: var(--text); }
+  code {
+    font-family: var(--mono);
+    background: var(--panel2); color: var(--green);
+    padding: 1px 6px; border-radius: 4px; font-size: .92em;
+  }
+  .card {
+    background: var(--panel); border-radius: 14px;
+    padding: 20px 24px; margin: 14px 0;
+    border: 1px solid #262c4a;
+  }
+  .complexity-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .complexity-row .card { flex: 1; min-width: 240px; margin: 0; position: relative; overflow: hidden; }
+  .complexity-row .card .big {
+    font-family: var(--mono); font-size: 1.5em; color: var(--accent);
+  }
+  .complexity-row .card .tag {
+    position: absolute; top: 12px; right: 14px; font-size: .8em;
+    padding: 1px 8px; border-radius: 99px;
+  }
+  .tag.ok { background: rgba(61,220,151,.15); color: var(--green); }
+  .tag.bad { background: rgba(255,107,129,.15); color: var(--red); }
+  .tag.mid { background: rgba(255,209,102,.15); color: var(--yellow); }
+  .key-insight {
+    background: linear-gradient(135deg, rgba(79,140,255,.12), rgba(177,140,255,.10));
+    border: 1px solid rgba(79,140,255,.35);
+    border-radius: 14px; padding: 18px 22px; margin: 16px 0;
+    font-size: 1.05em;
+  }
+  .key-insight b { color: var(--accent); }
+
+  /* ===== 动画区 ===== */
+  .stage-wrap {
+    background: var(--panel); border: 1px solid #262c4a;
+    border-radius: 16px; padding: 24px; margin: 18px 0;
+  }
+  .array-row {
+    display: flex; gap: 8px; justify-content: center;
+    align-items: flex-end; padding: 10px 0 0; min-height: 130px;
+  }
+  .cell {
+    width: 52px; height: 52px; border-radius: 10px;
+    background: var(--panel2); border: 1px solid #313a63;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 1.15em; font-weight: 600;
+    position: relative; transition: all .45s cubic-bezier(.4,0,.2,1);
+  }
+  .cell .idx {
+    position: absolute; bottom: -20px; font-size: .62em; color: #5b6591;
+    font-weight: 400;
+  }
+  .cell.pinned { background: rgba(177,140,255,.22); border-color: var(--purple); color: var(--purple); transform: translateY(-8px); }
+  .cell.left  { background: rgba(79,140,255,.22); border-color: var(--accent); color: var(--accent); }
+  .cell.right { background: rgba(61,220,151,.20); border-color: var(--green); color: var(--green); }
+  .cell.found { background: rgba(255,209,102,.25); border-color: var(--yellow); color: var(--yellow); transform: translateY(-8px); }
+  .cell.dim { opacity: .35; }
+  .arrow-label {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    font-size: .68em; white-space: nowrap; font-family: var(--mono); font-weight: 700;
+    transition: all .45s cubic-bezier(.4,0,.2,1);
+  }
+  .arrow-label.l { color: var(--accent); }
+  .arrow-label.r { color: var(--green); }
+  .arrow-label.i { color: var(--purple); }
+
+  .status-line {
+    text-align: center; margin-top: 46px; font-family: var(--mono);
+    font-size: 1.05em; min-height: 1.6em;
+  }
+  .status-line .sum-pos { color: var(--red); }
+  .status-line .sum-neg { color: var(--accent); }
+  .status-line .sum-zero { color: var(--yellow); }
+  .action-log {
+    margin-top: 10px; text-align: center; color: var(--muted);
+    font-size: .92em; min-height: 1.5em; font-family: "Microsoft YaHei", sans-serif;
+  }
+  .log-history {
+    margin-top: 14px; max-height: 130px; overflow-y: auto;
+    font-family: var(--mono); font-size: .85em; color: #7c86b3;
+    border-top: 1px dashed #2c3358; padding-top: 10px;
+  }
+  .log-history div { padding: 1px 0; }
+  .log-history .hit { color: var(--yellow); }
+
+  /* 控制条 */
+  .controls {
+    display: flex; justify-content: center; align-items: center; gap: 12px;
+    margin-top: 20px;
+  }
+  .controls button {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid #313a63; border-radius: 10px;
+    padding: 8px 18px; font-size: .95em; cursor: pointer;
+    transition: background .2s;
+    font-family: inherit;
+  }
+  .controls button:hover { background: #2a3258; }
+  .controls button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls button:disabled { opacity: .4; cursor: not-allowed; }
+  .progress {
+    flex: 1; max-width: 300px; height: 6px; border-radius: 99px;
+    background: var(--panel2); overflow: hidden;
+  }
+  .progress > div {
+    height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--purple));
+    transition: width .3s;
+  }
+  .speed-ctl { color: var(--muted); font-size: .85em; display: flex; align-items: center; gap: 6px; }
+  .speed-ctl select {
+    background: var(--panel2); color: var(--text); border: 1px solid #313a63;
+    border-radius: 6px; padding: 3px 6px; font-family: inherit;
+  }
+
+  .found-list {
+    margin-top: 12px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+  }
+  .found-list .triplet {
+    font-family: var(--mono); background: rgba(255,209,102,.12);
+    border: 1px solid rgba(255,209,102,.4); color: var(--yellow);
+    padding: 4px 14px; border-radius: 99px;
+    animation: pop .4s cubic-bezier(.3,1.6,.5,1);
+  }
+  @keyframes pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* 去重示意 */
+  .dedup-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: .95em; }
+  .dedup-table td, .dedup-table th {
+    border: 1px solid #2c3358; padding: 8px 12px; text-align: left; color: var(--muted);
+  }
+  .dedup-table th { color: var(--text); background: var(--panel2); }
+  .dedup-table code { font-size: 1em; }
+
+  .footer-note { margin-top: 40px; font-size: .85em; color: #5b6591; text-align: center; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<h1><span class="lc-tag">LC 15</span>三数之和（3Sum）图解</h1>
+<p>题目：给定整数数组 <code>nums</code>，找出所有满足 <code>i ≠ j ≠ k</code> 且 <code>nums[i] + nums[j] + nums[k] == 0</code> 的<b>不重复</b>三元组。<br>
+示例：<code>[-1, 0, 1, 2, -1, -4]</code> → <code>[[-1,-1,2], [-1,0,1]]</code></p>
+
+<h2>一、复杂度演进：为什么 O(n²) 就够了</h2>
+<div class="complexity-row">
+  <div class="card">
+    <span class="tag bad">超时风险</span>
+    <div class="big">O(n³)</div>
+    <p><b>暴力枚举</b>：三重循环遍历所有组合 <code>i&lt;j&lt;k</code>，n=3000 时约 10⁹ 次运算，必然超时。</p>
+  </div>
+  <div class="card">
+    <span class="tag mid">可行但难去重</span>
+    <div class="big">O(n²) 哈希</div>
+    <p><b>固定 i + 哈希找两数</b>：类比「两数之和」，但用哈希表存放结果会引入大量重复三元组，去重逻辑繁琐。</p>
+  </div>
+  <div class="card">
+    <span class="tag ok">本题标准解</span>
+    <div class="big">O(n²) 双指针</div>
+    <p><b>排序 + 双指针</b>：外层固定一个数 O(n)，内层双指针扫描 O(n)，总复杂度 O(n²)。排序后天然有序，去重只需一句话。</p>
+  </div>
+</div>
+
+<div class="key-insight">
+  💡 <b>核心转化</b>：三数之和 = 枚举第一个数 <code>nums[i]</code>，在它右边的区间里找两个数，使它们的和等于 <code>-nums[i]</code> —— 问题降维成了经典的「两数之和」。
+</div>
+
+<h2>二、双指针为什么有效？（关键一步）</h2>
+<div class="card">
+  <p>把数组<b>升序排序</b>后，在区间 <code>[L, R]</code> 上计算 <code>sum = nums[i] + nums[L] + nums[R]</code>：</p>
+  <ul>
+    <li>📊 <strong>sum &lt; 0</strong> → 和太小，唯一有希望的办法是<b>让 L 右移</b>把和变大（R 左移只会更小）；</li>
+    <li>📊 <strong>sum &gt; 0</strong> → 和太大，<b>让 R 左移</b>把和变小；</li>
+    <li>🎯 <strong>sum == 0</strong> → 收获一组答案！</li>
+  </ul>
+  <p><b>为什么是 O(n)？</b>每比较一次，L 和 R 之间的距离就缩短 1，而每一次移动都<b>排除了一整行不可能的解</b>——没有遗漏、没有重复比较。这就是把 O(n²) 的两两枚举压成 O(n) 扫描的本质。</p>
+</div>
+
+<h2>三、动画演示</h2>
+<div class="stage-wrap">
+  <p style="text-align:center; color:var(--muted); font-size:.9em; margin-bottom:6px;">
+    输入 <code>[-1, 0, 1, 2, -1, -4]</code> → 排序后 <code>[-4, -1, -1, 0, 1, 2]</code><br>
+    <span style="color:var(--purple)">■ i（固定数）</span>&nbsp;&nbsp;
+    <span style="color:var(--accent)">■ L（左指针）</span>&nbsp;&nbsp;
+    <span style="color:var(--green)">■ R（右指针）</span>&nbsp;&nbsp;
+    <span style="color:var(--yellow)">■ 命中答案</span>
+  </p>
+
+  <div class="array-row" id="arrayRow"></div>
+
+  <div class="status-line" id="statusLine">点击「▶ 播放」开始动画</div>
+  <div class="action-log" id="actionLog"></div>
+
+  <div class="controls">
+    <button id="btnPlay" class="primary">▶ 播放</button>
+    <button id="btnPrev">⏮ 上一步</button>
+    <button id="btnNext">下一步 ⏭</button>
+    <button id="btnReset">↺ 重置</button>
+    <div class="progress"><div id="progressBar"></div></div>
+    <div class="speed-ctl">
+      速度
+      <select id="speedSel">
+        <option value="1800">慢</option>
+        <option value="1000" selected>中</option>
+        <option value="450">快</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="found-list" id="foundList"></div>
+  <div class="log-history" id="logHistory"></div>
+</div>
+
+<h2>四、去重的三个关键点（本题最容易写错的地方）</h2>
+<div class="card">
+  <p>「不重复」要求结果里不能出现值相同的三元组。排序之后，<b>相同的数必然相邻</b>，去重就变成了简单的「跳过邻居」：</p>
+  <table class="dedup-table">
+    <tr><th>位置</th><th>规则</th><th>原因</th></tr>
+    <tr>
+      <td>第一个数 <code>nums[i]</code></td>
+      <td><code>nums[i] == nums[i-1]</code> 时跳过</td>
+      <td>以它开头的三元组在上一轮已经找完了</td>
+    </tr>
+    <tr>
+      <td>第二个数 <code>nums[L]</code></td>
+      <td>命中后，<code>L</code> 连续右移跳过相同值</td>
+      <td>避免同一固定数下产生重复组合</td>
+    </tr>
+    <tr>
+      <td>第三个数 <code>nums[R]</code></td>
+      <td>命中后，<code>R</code> 连续左移跳过相同值</td>
+      <td>同上，且 L、R 要<b>同时</b>再各走一步</td>
+    </tr>
+  </table>
+  <p style="margin-top:10px">⚠️ 另一个实用剪枝：<b>排序后如果 <code>nums[i] &gt; 0</code>，直接 break</b> —— 最小的数都大于 0，三个正数之和不可能为 0。动画里 i=5（值为 2）时就能看到这一步。</p>
+</div>
+
+<h2>五、复杂度总结</h2>
+<div class="complexity-row">
+  <div class="card">
+    <div class="big">时间 O(n²)</div>
+    <p>排序 O(n log n) + 外层枚举 O(n) × 内层双指针 O(n)。n log n 被 n² 吞没。</p>
+  </div>
+  <div class="card">
+    <div class="big">空间 O(log n)</div>
+    <p>只用了排序所需的栈空间（快排递归），除返回结果外没有额外开销。</p>
+  </div>
+</div>
+
+<div class="footer-note">LC 15 · 排序 + 双指针 · 后续可延伸：LC 16 最接近的三数之和、LC 18 四数之和（再套一层循环即可）</div>
+
+<script>
+/* ================= 生成动画步骤 ================= */
+const RAW = [-1, 0, 1, 2, -1, -4];
+const nums = [...RAW].sort((a, b) => a - b);
+const steps = [];
+
+function snap(action, note, pinned, left, right, foundCells, hit) {
+  steps.push({
+    action,                    // 'compare' | 'moveL' | 'moveR' | 'found' | 'skipI' | 'breakI' | 'start'
+    note,
+    pinned, left, right,
+    foundCells: foundCells || [],
+    hit: hit || null,
+    found: [...(steps.length ? steps[steps.length - 1].found : [])],
+    log: [...(steps.length ? steps[steps.length - 1].log : [])],
+  });
+  const s = steps[steps.length - 1];
+  if (hit) s.found.push(hit);
+  if (note) s.log.push(note);
+}
+
+snap('start', `数组已排序：[${nums.join(', ')}]，开始枚举 i = 0`, -1, -1, -1);
+
+for (let i = 0; i < nums.length - 2; i++) {
+  if (nums[i] > 0) {
+    snap('breakI', `nums[i] = ${nums[i]} > 0，最小数都为正，剪枝结束`, i, -1, -1);
+    break;
+  }
+  if (i > 0 && nums[i] === nums[i - 1]) {
+    snap('skipI', `nums[i] = ${nums[i]} 与前一个值相同 → 去重，跳过 i = ${i}`, i, -1, -1);
+    continue;
+  }
+  snap('start', `固定 i = ${i}（nums[i] = ${nums[i]}），目标：在右边找两数之和 = ${-nums[i]}`, i, i + 1, nums.length - 1);
+  let L = i + 1, R = nums.length - 1;
+  while (L < R) {
+    const s = nums[i] + nums[L] + nums[R];
+    if (s < 0) {
+      snap('compare', `sum = ${nums[i]} + ${nums[L]} + ${nums[R]} = ${s} < 0 → 和太小，L 右移`, i, L, R);
+      L++;
+      snap('moveL', `L → ${L}`, i, L, R);
+    } else if (s > 0) {
+      snap('compare', `sum = ${nums[i]} + ${nums[L]} + ${nums[R]} = ${s} > 0 → 和太大，R 左移`, i, L, R);
+      R--;
+      snap('moveR', `R → ${R}`, i, L, R);
+    } else {
+      snap('found', `🎉 sum = ${s}！找到三元组 [${nums[i]}, ${nums[L]}, ${nums[R]}]`, i, L, R, [i, L, R], [nums[i], nums[L], nums[R]]);
+      while (L < R && nums[L] === nums[L + 1]) { L++; snap('moveL', `nums[L] 重复，L 跳过 → ${L}`, i, L, R); }
+      while (L < R && nums[R] === nums[R - 1]) { R--; snap('moveR', `nums[R] 重复，R 跳过 → ${R}`, i, L, R); }
+      L++; R--;
+      snap('moveL', `命中后 L、R 各走一步：L = ${L}, R = ${R}`, i, L, R);
+    }
+  }
+  snap('start', `区间收缩完毕（L ≥ R），i 右移`, -1, -1, -1);
+}
+
+/* ================= 渲染 ================= */
+const arrayRow = document.getElementById('arrayRow');
+const statusLine = document.getElementById('statusLine');
+const actionLog = document.getElementById('actionLog');
+const logHistory = document.getElementById('logHistory');
+const foundList = document.getElementById('foundList');
+const progressBar = document.getElementById('progressBar');
+
+const cells = nums.map((v, idx) => {
+  const d = document.createElement('div');
+  d.className = 'cell';
+  d.innerHTML = `${v}<span class="idx">${idx}</span>`;
+  arrayRow.appendChild(d);
+  return d;
+});
+
+function render(k) {
+  const st = steps[k];
+  cells.forEach((c, idx) => {
+    c.className = 'cell';
+    if (st.foundCells.includes(idx)) c.classList.add('found');
+    else {
+      if (idx === st.pinned) c.classList.add('pinned');
+      if (idx === st.left && st.left > st.pinned && idx > st.pinned) c.classList.add('left');
+      if (idx === st.right && st.right > st.pinned) c.classList.add('right');
+      if (st.pinned >= 0 && (idx < st.pinned || (st.left >= 0 && idx < st.left) || idx > st.right)) c.classList.add('dim');
+    }
+  });
+  statusLine.innerHTML = st.note || '';
+  logHistory.innerHTML = st.log.slice(-40).map(l =>
+    l.includes('🎉') ? `<div class="hit">${l}</div>` : `<div>${l}</div>`).join('');
+  logHistory.scrollTop = logHistory.scrollHeight;
+  foundList.innerHTML = st.found.map(t => `<div class="triplet">[${t.join(', ')}]</div>`).join('');
+  progressBar.style.width = ((k + 1) / steps.length * 100) + '%';
+}
+
+/* ================= 播放控制 ================= */
+let cur = 0, timer = null;
+const btnPlay = document.getElementById('btnPlay');
+
+function stopPlay() { clearInterval(timer); timer = null; btnPlay.textContent = '▶ 播放'; }
+
+btnPlay.onclick = () => {
+  if (timer) { stopPlay(); return; }
+  if (cur >= steps.length - 1) cur = 0;
+  btnPlay.textContent = '⏸ 暂停';
+  timer = setInterval(() => {
+    if (cur < steps.length - 1) { cur++; render(cur); }
+    else stopPlay();
+  }, +document.getElementById('speedSel').value);
+};
+document.getElementById('btnNext').onclick = () => { stopPlay(); if (cur < steps.length - 1) { cur++; render(cur); } };
+document.getElementById('btnPrev').onclick = () => { stopPlay(); if (cur > 0) { cur--; render(cur); } };
+document.getElementById('btnReset').onclick = () => { stopPlay(); cur = 0; render(0); };
+
+render(0);
+</script>
+</body>
+</html>
